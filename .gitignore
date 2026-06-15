@@ -1,0 +1,87 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Model checkpoints
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+
+# Data files
+*.parquet
+*.jsonl
+*.json
+*.csv
+*.pkl
+*.h5
+*.hdf5
+
+# Images and figures
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.pdf
+
+# Visualization outputs
+figure/
+figures/
+visualization/
+viz_*/
+
+# Training data
+train_data/
+test_data/
+valid_data/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Conda
+conda.lock
+environment.yml
+
+# Weights & Biases
+wandb/
+*.wandb
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# TensorBoard
+runs/
+events.out.tfevents.*
