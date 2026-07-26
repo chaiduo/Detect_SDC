@@ -3,9 +3,15 @@ import json
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
 class ScoreEvaluator:
-    def __init__(self, judge_model_name='/data0/home/lc/cd/LingoQA', json_path=None):
-        tokenizer = AutoTokenizer.from_pretrained(judge_model_name, local_files_only=True)
-        model = AutoModelForSequenceClassification.from_pretrained(judge_model_name, local_files_only=True,use_safetensors=False)
+    def __init__(self, judge_model_name=None, json_path=None, local_files_only=True):
+        if judge_model_name is None:
+            judge_model_name = os.environ.get("LINGO_JUDGE_MODEL", "wayveai/Lingo-Judge")
+        tokenizer = AutoTokenizer.from_pretrained(judge_model_name, local_files_only=local_files_only)
+        model = AutoModelForSequenceClassification.from_pretrained(
+            judge_model_name,
+            local_files_only=local_files_only,
+            use_safetensors=False,
+        )
         self.lingo_judge = pipeline("text-classification", model=model, tokenizer=tokenizer)
         self.data = None
         if json_path is not None:

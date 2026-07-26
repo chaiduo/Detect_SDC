@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 import sys
 import json
 import random
@@ -17,7 +17,6 @@ grandparent_dir = os.path.abspath(os.path.join(current_dir, "..", ".."))
 sys.path.append(grandparent_dir)
 
 from utils.profiler import Profiler
-from utils.Lingo_judge import ScoreEvaluator
 from utils.fault_injector import FaultInjector
 from train_mapping_model import LayerAwareResidualMLP
 
@@ -70,6 +69,14 @@ def append_jsonl(path, data):
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(to_jsonable(data), ensure_ascii=False) + "\n")
 
+
+def load_clean_answers(golden_json):
+    with open(golden_json, "r", encoding="utf-8") as f:
+        samples = json.load(f)
+    return {int(item["id"]): item.get("pre_answer", "") for item in samples}
+
+
+
 def build_result_record(
     idx,
     before_score,
@@ -88,7 +95,7 @@ def build_result_record(
         "before_score": float(before_score),
         "after_score": float(after_score),
         "dtel_score": float(after_score - before_score),
-        "is_sdc": int(before_score != after_score),
+        "is_sdc": int(clean_pred.strip() != pred.strip()),
         "fault": to_jsonable(getattr(injector, "fault_info", None)),
         "image_path": img_path,
         "question": question,
@@ -106,8 +113,8 @@ def evaluate(
     data_dir,
     output_jsonl,
     device,
-    score_evaluator: ScoreEvaluator,
-    mapping_model_path: str = "./model/mapping_model.pt",
+    clean_answers,
+    mapping_model_path: str = "./model/lingoqa_mapping_model.pt",
     run_time: int = 0,
     inject_fault: bool = True,
     max_new_tokens: int = 100,
@@ -120,15 +127,15 @@ def evaluate(
 
     injector = FaultInjector(model, mode="activation")
 
-    prof = Profiler(model, proj_dim=64, seed=1234)
+    prof = Profiler(model, proj_dim=64, seed=42)
     prof.register()
 
     mapping_model = LayerAwareResidualMLP(
         x_dim=64,
         num_layers=28,
         layer_emb_dim=16,
-        hidden_dim=1024,
-        num_blocks=8,
+        hidden_dim=64,
+        num_blocks=4,
         dropout=0.1,
     ).to(device)
 
@@ -177,9 +184,9 @@ def evaluate(
             
             trimmed = [o[len(inp):] for inp, o in zip(inputs.input_ids, out_ids)]
             pred = processor.batch_decode(trimmed, skip_special_tokens=True)[0]
-            before_score, after_score, clean_pred = score_evaluator.get_fault_scores(
-                question, gt_answer, pred, sample_id
-            )
+            before_score = 0
+            after_score = 0
+            clean_pred = clean_answers.get(sample_id, "")
 
             sample_result = prof.get_attn_proj_model_compare_result(
                 predictor_model=mapping_model,
@@ -202,7 +209,7 @@ def evaluate(
             if inject_fault is False or run_time <= 1:
                 append_jsonl(output_jsonl, result)
             else:
-                if before_score != after_score:
+                if clean_pred.strip() != pred.strip():
                     append_jsonl(output_jsonl, result)
                    
             injector.unregister_hooks()
@@ -214,19 +221,19 @@ def evaluate(
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", type=str, default="/data1/home/dataset_share/wsh_data/data/qwen/Qwen2___5-VL-7B-Instruct")
-    parser.add_argument("--val_file", type=str, default="/data0/home/lc/cd/predict_error/LingoQA-main/data/val/val.parquet")
-    parser.add_argument("--data_dir", type=str, default="/data0/home/lc/cd/predict_error/LingoQA-main/data/val/")
-    parser.add_argument("--output_jsonl", type=str, default="/data1/home/dataset_share/cd_data/Qwen2.5-VL-7B/LingoQA/detect_LingoQA_Qwen_with_sem.jsonl")
+    parser.add_argument("--model_path", type=str, default="/data01/cd_workspace/llm/Qwen2.5-VL-7B-Instruct")
+    parser.add_argument("--val_file", type=str, default="/data01/cd_workspace/llm/LingoQA/val.parquet")
+    parser.add_argument("--data_dir", type=str, default="/data01/cd_workspace/llm/LingoQA/")
+    parser.add_argument("--output_jsonl", type=str, default="./json/detect_LingoQA_Qwen_with_sem.jsonl")
     parser.add_argument("--golden_json", type=str, default="./json/Golden_LingoQA_Qwen2.5-VL-7B.json")
-    parser.add_argument("--mapping_model", type=str, default="./model/mapping_model.pt")
+    parser.add_argument("--mapping_model", type=str, default="./model/lingoqa_mapping_model.pt")
     parser.add_argument("--device", type=str, default="cuda:0")
     args = parser.parse_args()
 
     set_model_seed(42)
 
     device = torch.device(args.device)
-    score_evaluator = ScoreEvaluator(json_path=args.golden_json)
+    clean_answers = load_clean_answers(args.golden_json)
 
     evaluate(
         model_path=args.model_path,
@@ -234,7 +241,7 @@ def main():
         data_dir=args.data_dir,
         output_jsonl=args.output_jsonl,
         device=device,
-        score_evaluator=score_evaluator,
+        clean_answers=clean_answers,
         mapping_model_path=args.mapping_model,
         inject_fault=False,
         max_new_tokens=50,
@@ -247,7 +254,7 @@ def main():
             data_dir=args.data_dir,
             output_jsonl=args.output_jsonl,
             device=device,
-            score_evaluator=score_evaluator,
+            clean_answers=clean_answers,
             mapping_model_path=args.mapping_model,
             run_time=run,
             inject_fault=True,

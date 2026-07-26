@@ -479,7 +479,7 @@ def visualize_sdc_overall_difference(
 
 
 if __name__ == "__main__":
-    jsonl_path = "/data1/home/dataset_share/cd_data/Qwen2.5-VL-7B/EarthVQA/final/detect_EarthVQA_Qwen_with_sem_project.jsonl"
+    jsonl_path = "/data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project.jsonl"
     # 1) 二分类
     visualize_sdc_overall_difference(
         jsonl_path=jsonl_path,

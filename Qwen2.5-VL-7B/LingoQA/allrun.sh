@@ -1,20 +1,30 @@
 #!/bin/bash
-set -e  # 遇到错误立即退出
+set -e
 
 # =========================
 # 公共路径配置
 # =========================
-MODEL_PATH="/data1/home/dataset_share/wsh_data/data/qwen/Qwen2___5-VL-7B-Instruct"
-VAL_FILE="/data0/home/lc/cd/predict_error/LingoQA-main/data/val/val.parquet"
-DATA_DIR="/data0/home/lc/cd/predict_error/LingoQA-main/data/val/"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}"
+
+MODEL_PATH="/data01/cd_workspace/llm/Qwen2.5-VL-7B-Instruct"
+VAL_FILE="/data01/cd_workspace/llm/LingoQA/val.parquet"
+DATA_DIR="/data01/cd_workspace/llm/LingoQA/"
+DEFAULT_PYTHON_BIN="${SCRIPT_DIR}/../.venv/bin/python"
+if [[ -z "${PYTHON_BIN:-}" && -x "${DEFAULT_PYTHON_BIN}" ]]; then
+    PYTHON_BIN="${DEFAULT_PYTHON_BIN}"
+else
+    PYTHON_BIN="${PYTHON_BIN:-python}"
+fi
 
 # 设备配置
-export CUDA_VISIBLE_DEVICES="6"
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
+export HF_ENDPOINT="https://hf-mirror.com"
 DEVICE="cuda:0"
 
 # 中间文件路径
 GOLDEN_JSON="./json/Golden_LingoQA_Qwen2.5-VL-7B.json"
-MAPPING_DIR="/data1/home/dataset_share/cd_data/Qwen2.5-VL-7B/LingoQA"
+MAPPING_DIR="./json"
 MAPPING_JSONL="${MAPPING_DIR}/attn_proj_interlayer.jsonl"
 MAPPING_MODEL="./model/lingoqa_mapping_model.pt"
 OUTPUT_SEM_JSONL="${MAPPING_DIR}/detect_LingoQA_Qwen_with_sem.jsonl"
@@ -22,7 +32,7 @@ OUTPUT_SEM_JSONL="${MAPPING_DIR}/detect_LingoQA_Qwen_with_sem.jsonl"
 # 确保输出目录存在
 mkdir -p ./json
 mkdir -p ./model
-mkdir -p ${MAPPING_DIR}
+mkdir -p "${MAPPING_DIR}"
 
 # =========================
 # Step 1: Profile - 生成 golden 文件
@@ -32,7 +42,7 @@ echo "Input:  ${MODEL_PATH}, ${VAL_FILE}"
 echo "Output: ${GOLDEN_JSON}"
 echo "Device: ${DEVICE}"
 
-python ./LingoQA_Qwen2.5-VL-7B_profile.py \
+"${PYTHON_BIN}" ./LingoQA_Qwen2.5-VL-7B_profile.py \
     --model_path "${MODEL_PATH}" \
     --val_file "${VAL_FILE}" \
     --data_dir "${DATA_DIR}" \
@@ -49,11 +59,11 @@ echo "Input:  ${MODEL_PATH}, ${VAL_FILE}"
 echo "Output: ${MAPPING_JSONL}"
 echo "Device: ${DEVICE}"
 
-python ./LingoQA_Qwen2.5-VL-7B_mapping.py \
+"${PYTHON_BIN}" ./LingoQA_Qwen2.5-VL-7B_mapping.py \
     --model_path "${MODEL_PATH}" \
     --val_file "${VAL_FILE}" \
     --data_dir "${DATA_DIR}" \
-    --save_dir "${MAPPING_DIR}" \
+    --output_jsonl "${MAPPING_JSONL}" \
     --device "${DEVICE}"
 
 echo "Step 2 done."
@@ -66,7 +76,7 @@ echo "Input:  ${MAPPING_JSONL}"
 echo "Output: ${MAPPING_MODEL}"
 echo "Device: ${DEVICE}"
 
-python ../EarthVQA/train_mapping_model.py \
+"${PYTHON_BIN}" ./train_mapping_model.py \
     --jsonl_path "${MAPPING_JSONL}" \
     --save_best_path "${MAPPING_MODEL}" \
     --device "${DEVICE}"
@@ -81,7 +91,7 @@ echo "Input:  ${MODEL_PATH}, ${VAL_FILE}, ${MAPPING_MODEL}, ${GOLDEN_JSON}"
 echo "Output: ${OUTPUT_SEM_JSONL}"
 echo "Device: ${DEVICE}"
 
-python ./LingoQA_Qwen2.5-VL-7B_sem.py \
+"${PYTHON_BIN}" ./LingoQA_Qwen2.5-VL-7B_sem.py \
     --model_path "${MODEL_PATH}" \
     --val_file "${VAL_FILE}" \
     --data_dir "${DATA_DIR}" \

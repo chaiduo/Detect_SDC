@@ -1,3 +1,4 @@
+import argparse
 import json
 import random
 import torch
@@ -38,7 +39,7 @@ class InterLayerJsonlTensorDataset(Dataset):
         print("[Info] Converting to torch tensors...")
 
         self.x = torch.tensor(xs, dtype=torch.float32)
-        self.y = torch.tensor(ys, dtype=torch.long)
+        self.y = torch.tensor(ys, dtype=torch.float32)
         self.src_layer = torch.tensor(src_layers, dtype=torch.long)
         self.tgt_layer = torch.tensor(tgt_layers, dtype=torch.long)
         self.step = torch.tensor(steps, dtype=torch.long)
@@ -151,24 +152,6 @@ class ResidualMLPBlock(nn.Module):
         h = self.dropout(h)
         return x + h
 
-class ResidualMLPBlock(nn.Module):
-    def __init__(self, dim: int, dropout: float = 0.1):
-        super().__init__()
-        self.norm = nn.LayerNorm(dim)
-        self.fc1 = nn.Linear(dim, dim * 2)
-        self.act = nn.GELU()
-        self.dropout = nn.Dropout(dropout)
-        self.fc2 = nn.Linear(dim * 2, dim)
-
-    def forward(self, x):
-        h = self.norm(x)
-        h = self.fc1(h)
-        h = self.act(h)
-        h = self.dropout(h)
-        h = self.fc2(h)
-        h = self.dropout(h)
-        return x + h
-
 
 class LayerAwareResidualMLP(nn.Module):
     def __init__(
@@ -176,10 +159,9 @@ class LayerAwareResidualMLP(nn.Module):
         x_dim=64,
         num_layers=28,
         layer_emb_dim=16,
-        hidden_dim=512,
-        num_blocks=8,
+        hidden_dim=64,
+        num_blocks=4,
         dropout=0.1,
-        num_classes=4,
     ):
         super().__init__()
 
@@ -196,7 +178,7 @@ class LayerAwareResidualMLP(nn.Module):
         )
 
         self.out_norm = nn.LayerNorm(hidden_dim)
-        self.classifier = nn.Linear(hidden_dim, num_classes)
+        self.out_proj = nn.Linear(hidden_dim, x_dim)
 
     def forward(self, x, src_layer, tgt_layer):
         x_norm = self.norm_x(x)
@@ -208,28 +190,35 @@ class LayerAwareResidualMLP(nn.Module):
         h = self.blocks(h)
         h = self.out_norm(h)
 
-        logits = self.classifier(h)
-        return logits
+        delta = self.out_proj(h)
+        y_hat = x + delta
+        return y_hat
 
 # =========================
 # 4. Loss
 # =========================
-def classification_loss(logits, target):
-    """分类交叉熵损失"""
-    loss = F.cross_entropy(logits, target)
-    preds = logits.argmax(dim=-1)
-    acc = (preds == target).float().mean()
-    return loss, {"loss": loss.item(), "acc": acc.item()}
+def regression_loss(pred, target, cosine_weight=0.1):
+    mse = F.mse_loss(pred, target)
+    cos_loss = 1.0 - F.cosine_similarity(pred, target, dim=-1).mean()
+    total = mse + cosine_weight * cos_loss
+
+    return total, {
+        "mse": mse.item(),
+        "cos_loss": cos_loss.item(),
+        "cos_sim": 1.0 - cos_loss.item(),
+        "total": total.item(),
+    }
 
 
 # =========================
 # 5. Eval
 # =========================
-def evaluate_model(model, data_loader, device, use_amp=False, device_type="cpu"):
+def evaluate_model(model, data_loader, device, cosine_weight=0.1, use_amp=False, device_type="cpu"):
     model.eval()
 
     loss_sum = 0.0
-    correct_sum = 0
+    mse_sum = 0.0
+    cos_loss_sum = 0.0
     count = 0
 
     with torch.no_grad():
@@ -240,30 +229,37 @@ def evaluate_model(model, data_loader, device, use_amp=False, device_type="cpu")
             tgt_layer = batch["tgt_layer"].to(device, non_blocking=True)
 
             with torch.amp.autocast(device_type=device_type, enabled=use_amp):
-                logits = model(x, src_layer, tgt_layer)
-                loss, metrics = classification_loss(logits, y)
+                pred = model(x, src_layer, tgt_layer)
+                loss, metrics = regression_loss(pred, y, cosine_weight=cosine_weight)
 
             bs = x.size(0)
             loss_sum += loss.item() * bs
-            correct_sum += metrics["acc"] * bs
+            mse_sum += metrics["mse"] * bs
+            cos_loss_sum += metrics["cos_loss"] * bs
             count += bs
 
     avg_loss = loss_sum / max(count, 1)
-    avg_acc = correct_sum / max(count, 1)
+    avg_mse = mse_sum / max(count, 1)
+    avg_cos_loss = cos_loss_sum / max(count, 1)
+    avg_cos_sim = 1.0 - avg_cos_loss
 
     return {
         "loss": avg_loss,
-        "acc": avg_acc,
+        "mse": avg_mse,
+        "cos_loss": avg_cos_loss,
+        "cos_sim": avg_cos_sim,
     }
 
 
 def evaluate_final_split(model, data_loader, device, split_name="Valid", use_amp=False, device_type="cpu"):
     model.eval()
 
-    all_preds = []
-    all_labels = []
-    loss_sum = 0.0
-    count = 0
+    total_mse = 0.0
+    total_cos = 0.0
+    total_samples = 0
+    total_mean_y = 0.0
+    total_mean_y_hat = 0.0
+    total_hamming = 0.0
 
     with torch.no_grad():
         for batch in data_loader:
@@ -273,24 +269,43 @@ def evaluate_final_split(model, data_loader, device, split_name="Valid", use_amp
             tgt_layer = batch["tgt_layer"].to(device, non_blocking=True)
 
             with torch.amp.autocast(device_type=device_type, enabled=use_amp):
-                logits = model(x, src_layer, tgt_layer)
-                loss, _ = classification_loss(logits, y)
+                y_hat = model(x, src_layer, tgt_layer)
 
-            preds = logits.argmax(dim=-1)
-            all_preds.extend(preds.cpu().tolist())
-            all_labels.extend(y.cpu().tolist())
-            loss_sum += loss.item() * x.size(0)
-            count += x.size(0)
+            mean_yhat = torch.mean(y_hat, dim=-1)
+            mean_y = torch.mean(y, dim=-1)
+            mse = torch.mean((y_hat - y) ** 2, dim=-1)
+            cos = F.cosine_similarity(y_hat, y, dim=-1)
+            idx_y_hat = torch.argsort(y_hat, dim=-1, stable=True)
+            idx_y = torch.argsort(y, dim=-1, stable=True)
+            hamming = (idx_y_hat != idx_y).sum(dim=-1)
 
-    avg_loss = loss_sum / max(count, 1)
-    acc = sum(p == l for p, l in zip(all_preds, all_labels)) / max(count, 1)
+            total_mean_y += mean_y.sum().item()
+            total_mean_y_hat += mean_yhat.sum().item()
+            total_mse += mse.sum().item()
+            total_cos += cos.sum().item()
+            total_hamming += hamming.sum().item()
+            total_samples += x.size(0)
 
-    print(f"[{split_name}] Loss: {avg_loss:.6f}")
-    print(f"[{split_name}] Accuracy: {acc:.4f}")
+    avg_mse = total_mse / max(total_samples, 1)
+    rmse = avg_mse ** 0.5
+    avg_cos = total_cos / max(total_samples, 1)
+    avg_mean_y = total_mean_y / max(total_samples, 1)
+    avg_mean_y_hat = total_mean_y_hat / max(total_samples, 1)
+    avg_hamming = total_hamming / max(total_samples, 1)
+
+    print(f"[{split_name}] RMSE: {rmse:.6f}")
+    print(f"[{split_name}] Cosine Similarity: {avg_cos:.6f}")
+    print(f"[{split_name}] Mean y: {avg_mean_y:.6f}")
+    print(f"[{split_name}] Mean y_hat: {avg_mean_y_hat:.6f}")
+    print(f"[{split_name}] Hamming (rank): {avg_hamming:.6f}")
 
     return {
-        "loss": avg_loss,
-        "acc": acc,
+        "rmse": rmse,
+        "mse": avg_mse,
+        "cosine_similarity": avg_cos,
+        "mean_y": avg_mean_y,
+        "mean_y_hat": avg_mean_y_hat,
+        "hamming_rank": avg_hamming,
     }
 
 
@@ -312,6 +327,7 @@ def train_model(
     scheduler_patience: int = 5,
     scheduler_factor: float = 0.5,
     min_lr: float = 1e-6,
+    cosine_weight: float = 0.1,
     seed: int = 42,
     split_mode: str = "random",
     device: str = "cuda:4" if torch.cuda.is_available() else "cpu",
@@ -362,8 +378,8 @@ def train_model(
         x_dim=64,
         num_layers=num_layers,
         layer_emb_dim=16,
-        hidden_dim=1024,
-        num_blocks=8,
+        hidden_dim=64,
+        num_blocks=4,
         dropout=0.1,
     ).to(device)
 
@@ -406,8 +422,8 @@ def train_model(
             optimizer.zero_grad(set_to_none=True)
 
             with torch.amp.autocast(device_type=device_type, enabled=use_amp):
-                logits = model(x, src_layer, tgt_layer)
-                loss, _ = classification_loss(logits, y)
+                pred = model(x, src_layer, tgt_layer)
+                loss, _ = regression_loss(pred, y, cosine_weight=cosine_weight)
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -424,6 +440,7 @@ def train_model(
             model,
             val_loader,
             device=device,
+            cosine_weight=cosine_weight,
             use_amp=use_amp,
             device_type=device_type,
         )
@@ -437,7 +454,9 @@ def train_model(
             f"lr={current_lr:.6e} | "
             f"train_loss={train_loss:.6f} | "
             f"val_loss={val_metrics['loss']:.6f} | "
-            f"val_acc={val_metrics['acc']:.4f}"
+            f"val_mse={val_metrics['mse']:.6f} | "
+            f"val_cos_loss={val_metrics['cos_loss']:.6f} | "
+            f"val_cos_sim={val_metrics['cos_sim']:.6f}"
         )
 
         # save best by val loss
@@ -480,24 +499,46 @@ def train_model(
 # 7. Main
 # =========================
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--jsonl_path", type=str, default="./json/attn_proj_mapping_64_project.jsonl")
+    parser.add_argument("--save_best_path", type=str, default="./model/best_mapping_model.pt")
+    parser.add_argument("--num_layers", type=int, default=28)
+    parser.add_argument("--batch_size", type=int, default=2048)
+    parser.add_argument("--lr", type=float, default=5e-4)
+    parser.add_argument("--weight_decay", type=float, default=1e-4)
+    parser.add_argument("--epochs", type=int, default=500)
+    parser.add_argument("--num_workers", type=int, default=8)
+    parser.add_argument("--val_ratio", type=float, default=0.1)
+    parser.add_argument("--test_ratio", type=float, default=0.1)
+    parser.add_argument("--early_stop_patience", type=int, default=15)
+    parser.add_argument("--scheduler_patience", type=int, default=5)
+    parser.add_argument("--scheduler_factor", type=float, default=0.5)
+    parser.add_argument("--min_lr", type=float, default=1e-6)
+    parser.add_argument("--cosine_weight", type=float, default=0.1)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--split_mode", type=str, default="random", choices=("random", "sequential"))
+    parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu")
+    args = parser.parse_args()
+
     model, test_metrics = train_model(
-        jsonl_path="/data1/home/dataset_share/cd_data/Qwen2.5-VL-7B/VQAv2/final/attn_proj_mapping_64_project.jsonl",
-        save_best_path="best_model.pt",
-        num_layers=28,
-        batch_size=2048,
-        lr=5e-4,
-        weight_decay=1e-4,
-        epochs=500,
-        num_workers=8,
-        val_ratio=0.1,
-        test_ratio=0.1,
-        cosine_weight=1,
-        early_stop_patience=15,
-        scheduler_patience=5,
-        scheduler_factor=0.5,
-        min_lr=1e-6,
-        seed=42,
-        split_mode="random",
+        jsonl_path=args.jsonl_path,
+        save_best_path=args.save_best_path,
+        num_layers=args.num_layers,
+        batch_size=args.batch_size,
+        lr=args.lr,
+        weight_decay=args.weight_decay,
+        epochs=args.epochs,
+        num_workers=args.num_workers,
+        val_ratio=args.val_ratio,
+        test_ratio=args.test_ratio,
+        early_stop_patience=args.early_stop_patience,
+        scheduler_patience=args.scheduler_patience,
+        scheduler_factor=args.scheduler_factor,
+        min_lr=args.min_lr,
+        cosine_weight=args.cosine_weight,
+        seed=args.seed,
+        split_mode=args.split_mode,
+        device=args.device,
     )
 
     print("[Info] Final test metrics:")

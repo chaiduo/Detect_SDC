@@ -1,7 +1,6 @@
 import os
 import sys
-# os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
 import torch
 import numpy as np
@@ -28,15 +27,19 @@ def evaluate(
     model_path,
     val_file,
     data_dir,
-    save_dir,
+    output_jsonl,
     device,
     max_new_tokens,
 ):
     
+    output_dir = os.path.dirname(output_jsonl)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(model_path,torch_dtype=torch.bfloat16).eval().to(device)
     processor = AutoProcessor.from_pretrained(model_path,min_pixels=256 * 28 * 28,max_pixels=1280 * 28 * 28)
+    processor = AutoProcessor.from_pretrained(model_path,min_pixels=256 * 28 * 28,max_pixels=1280 * 28 * 28)
 
-    prof = Profiler(model, proj_dim=64, seed=1234)
+    prof = Profiler(model, proj_dim=64, seed=42)
     prof.register()
 
     sample_id = 0
@@ -74,7 +77,7 @@ def evaluate(
             trimmed = [o[len(inp):] for inp, o in zip(inputs.input_ids, out_ids)]
             pred = processor.batch_decode(trimmed, skip_special_tokens=True)[0]
 
-            prof.save_attn_proj_interlayer_jsonl(save_dir+"/attn_proj_interlayer.jsonl")
+            prof.save_attn_proj_interlayer_jsonl(output_jsonl)
             prof.reset(clear_stats=True)
             sample_id += 1
     prof.unregister()
@@ -82,10 +85,10 @@ def evaluate(
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", type=str, default="/data1/home/dataset_share/wsh_data/data/qwen/Qwen2___5-VL-7B-Instruct")
-    parser.add_argument("--val_file", type=str, default="/data0/home/lc/cd/predict_error/LingoQA-main/data/val/val.parquet")
-    parser.add_argument("--data_dir", type=str, default="/data0/home/lc/cd/predict_error/LingoQA-main/data/val/")
-    parser.add_argument("--save_dir", type=str, default="/data1/home/dataset_share/cd_data/Qwen2.5-VL-7B/LingoQA")
+    parser.add_argument("--model_path", type=str, default="/data01/cd_workspace/llm/Qwen2.5-VL-7B-Instruct")
+    parser.add_argument("--val_file", type=str, default="/data01/cd_workspace/llm/LingoQA/val.parquet")
+    parser.add_argument("--data_dir", type=str, default="/data01/cd_workspace/llm/LingoQA/")
+    parser.add_argument("--output_jsonl", type=str, default="./json/attn_proj_interlayer.jsonl")
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--max_new_tokens", type=int, default=50)
     args = parser.parse_args()
@@ -97,7 +100,7 @@ def main():
         model_path=args.model_path,
         val_file=args.val_file,
         data_dir=args.data_dir,
-        save_dir=args.save_dir,
+        output_jsonl=args.output_jsonl,
         device=device,
         max_new_tokens=args.max_new_tokens,
     )

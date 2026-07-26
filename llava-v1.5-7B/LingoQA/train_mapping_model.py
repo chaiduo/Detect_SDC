@@ -448,8 +448,6 @@ def train_model(
 
     if best_state is not None:
         model.load_state_dict(best_state)
-    # state_dict = torch.load("../Qwen2.5-VL-7B/best_model.pt")
-    # model.load_state_dict(state_dict)
     # final valid evaluation
     print("[Info] Training finished. Running final evaluation on valid set...")
     final_valid_metrics = evaluate_final_split(
@@ -466,23 +464,46 @@ def train_model(
 # 7. Main
 # =========================
 def main():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--jsonl_path", type=str, default="/data1/home/dataset_share/cd_data/llava-v1.5-7B/LingoQA/attn_proj_interlayer.jsonl")
+    parser.add_argument("--save_best_path", type=str, default="./model/lingoqa_mapping_model.pt")
+    parser.add_argument("--device", type=str, default="cuda:0")
+    parser.add_argument("--num_layers", type=int, default=32)
+    parser.add_argument("--batch_size", type=int, default=2048)
+    parser.add_argument("--lr", type=float, default=5e-4)
+    parser.add_argument("--weight_decay", type=float, default=1e-4)
+    parser.add_argument("--epochs", type=int, default=500)
+    parser.add_argument("--num_workers", type=int, default=8)
+    parser.add_argument("--valid_ratio", type=float, default=0.15)
+    parser.add_argument("--test_ratio_in_train", type=float, default=0.15)
+    parser.add_argument("--cosine_weight", type=float, default=1)
+    parser.add_argument("--early_stop_patience", type=int, default=15)
+    parser.add_argument("--scheduler_patience", type=int, default=5)
+    parser.add_argument("--scheduler_factor", type=float, default=0.5)
+    parser.add_argument("--min_lr", type=float, default=1e-6)
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
+
     model, valid_metrics = train_model(
-        jsonl_path="/data1/home/dataset_share/cd_data/llava-v1.5-7b/LingoQA/attn_proj_interlayer.jsonl",
-        save_best_path="best_model-llava.pt",
-        num_layers=32,
-        batch_size=2048,
-        lr=5e-4,
-        weight_decay=1e-4,
-        epochs=500,
-        num_workers=8,
-        valid_ratio=0.15,
-        test_ratio_in_train=0.15,
-        cosine_weight=1,
-        early_stop_patience=15,
-        scheduler_patience=5,
-        scheduler_factor=0.5,
-        min_lr=1e-6,
-        seed=42,
+        jsonl_path=args.jsonl_path,
+        save_best_path=args.save_best_path,
+        num_layers=args.num_layers,
+        batch_size=args.batch_size,
+        lr=args.lr,
+        weight_decay=args.weight_decay,
+        epochs=args.epochs,
+        num_workers=args.num_workers,
+        valid_ratio=args.valid_ratio,
+        test_ratio_in_train=args.test_ratio_in_train,
+        cosine_weight=args.cosine_weight,
+        early_stop_patience=args.early_stop_patience,
+        scheduler_patience=args.scheduler_patience,
+        scheduler_factor=args.scheduler_factor,
+        min_lr=args.min_lr,
+        seed=args.seed,
+        device=args.device,
     )
 
     print("[Info] Final valid metrics:")

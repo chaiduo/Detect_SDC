@@ -3,9 +3,10 @@ import sys
 import io
 import json
 import glob
+import argparse
 from pathlib import Path
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
 import numpy as np
 import pandas as pd
@@ -103,7 +104,7 @@ def collect_parquet_files(parquet_path):
 
     if os.path.isdir(parquet_path):
         files = sorted(glob.glob(os.path.join(parquet_path, "*.parquet")))
-        return files[:2]
+        return files
 
     raise FileNotFoundError(f"parquet path not found: {parquet_path}")
 
@@ -131,8 +132,9 @@ def build_messages(question, pil_image):
 def evaluate(
     model_path,
     parquet_path,
-    save_dir,
+    output_jsonl,
     device,
+    max_samples=5000,
 ):
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
         model_path,
@@ -149,6 +151,9 @@ def evaluate(
         raise ValueError(f"No parquet files found in: {parquet_path}")
 
     print(f"[Info] Found {len(parquet_files)} parquet file(s).")
+    output_dir = os.path.dirname(output_jsonl)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     prof = Profiler(model, proj_dim=64, proj_method="project", seed=42)
     prof.register()
@@ -177,30 +182,33 @@ def evaluate(
                 max_new_tokens=50
             )
 
-            prof.save_attn_proj_interlayer_jsonl(
-                save_dir + "attn_proj_mapping_64_project_id.jsonl",
-                sample_id=sample_id
-            )
+            prof.save_attn_proj_interlayer_jsonl(output_jsonl, sample_id=sample_id)
             prof.reset(clear_stats=True)
             sample_id += 1
-            if sample_id >= 5000: # 为了节约时间，只看前5000样本
+            if sample_id >= max_samples:
                 break
-        if sample_id >= 5000:
+        if sample_id >= max_samples:
             break
 
     prof.unregister()
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_path", type=str, default="/data01/cd_workspace/llm/Qwen2.5-VL-7B-Instruct")
+    parser.add_argument("--parquet_path", type=str, default="/data01/cd_workspace/llm/VQAv2")
+    parser.add_argument("--output_jsonl", type=str, default="./json/attn_proj_mapping_64_project.jsonl")
+    parser.add_argument("--device", type=str, default="cuda:0")
+    parser.add_argument("--max_samples", type=int, default=5000)
+    args = parser.parse_args()
+
     set_model_seed(42)
-    device = torch.device("cuda:0")
-    model_path = "/data1/home/dataset_share/wsh_data/data/qwen/Qwen2___5-VL-7B-Instruct"
-    parquet_path = "/data0/home/lc/cd/predict_error/Detect_SDC/Qwen2.5-VL-7B/VQAv2/train_data"
-    save_dir = "/data1/home/dataset_share/cd_data/Qwen2.5-VL-7B/VQAv2/final/"
+    device = torch.device(args.device)
     evaluate(
-        model_path=model_path,
-        parquet_path=parquet_path,
-        save_dir=save_dir,
+        model_path=args.model_path,
+        parquet_path=args.parquet_path,
+        output_jsonl=args.output_jsonl,
         device=device,
+        max_samples=args.max_samples,
     )
 if __name__ == "__main__":
     main()

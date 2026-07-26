@@ -3,9 +3,10 @@ import sys
 import io
 import json
 import glob
+import argparse
 from pathlib import Path
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
 import numpy as np
 import pandas as pd
@@ -77,7 +78,7 @@ def collect_parquet_files(parquet_path):
 
     if os.path.isdir(parquet_path):
         files = sorted(glob.glob(os.path.join(parquet_path, "*.parquet")))
-        return files[:2]
+        return files
 
     raise FileNotFoundError(f"parquet path not found: {parquet_path}")
 
@@ -135,7 +136,8 @@ def evaluate(
     parquet_path,
     golden_json,
     device,
-    similarity_evaluator: SimilarityEvaluator
+    similarity_evaluator: SimilarityEvaluator,
+    max_samples=5000,
 ):
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
         model_path,
@@ -191,9 +193,9 @@ def evaluate(
 
             all_samples.append(sample_data)
             sample_id += 1
-            if sample_id >= 5000:
+            if sample_id >= max_samples:
                 break
-        if sample_id >= 5000:
+        if sample_id >= max_samples:
             break
 
     os.makedirs(os.path.dirname(golden_json), exist_ok=True)
@@ -205,19 +207,25 @@ def evaluate(
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_path", type=str, default="/data01/cd_workspace/llm/Qwen2.5-VL-7B-Instruct")
+    parser.add_argument("--parquet_path", type=str, default="/data01/cd_workspace/llm/VQAv2")
+    parser.add_argument("--golden_json", type=str, default="./json/Golden_VQAv2_Qwen2.5-VL-7B_30_new.json")
+    parser.add_argument("--device", type=str, default="cuda:0")
+    parser.add_argument("--max_samples", type=int, default=5000)
+    args = parser.parse_args()
+
     set_seed(42)
-    device = torch.device("cuda:0")
-    model_path = "/data1/home/dataset_share/wsh_data/data/qwen/Qwen2___5-VL-7B-Instruct"
-    parquet_path = "/data0/home/lc/cd/predict_error/Detect_SDC/Qwen2.5-VL-7B/VQAv2/"
-    golden_json = "./json/Golden_VQAv2_Qwen2.5-VL-7B_30_new.json"
+    device = torch.device(args.device)
     se = SimilarityEvaluator()
 
     evaluate(
-        model_path=model_path,
-        parquet_path=parquet_path,
-        golden_json=golden_json,
+        model_path=args.model_path,
+        parquet_path=args.parquet_path,
+        golden_json=args.golden_json,
         device=device,
-        similarity_evaluator=se
+        similarity_evaluator=se,
+        max_samples=args.max_samples,
     )
 
 

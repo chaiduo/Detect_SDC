@@ -1,9 +1,11 @@
+import os
 import json
-from tqdm import tqdm
 from sentence_transformers import CrossEncoder
 
 class SimilarityEvaluator:
-    def __init__(self, model_name='/data0/home/lc/cd/stsb-roberta-base', json_path=None):
+    def __init__(self, model_name=None, json_path=None):
+        if model_name is None:
+            model_name = os.environ.get("SIMILARITY_MODEL", "cross-encoder/stsb-roberta-base")
         self.model = CrossEncoder(model_name)
         self.data = None
         if json_path is not None:

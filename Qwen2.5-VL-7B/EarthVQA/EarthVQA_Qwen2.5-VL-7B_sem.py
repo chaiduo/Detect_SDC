@@ -17,7 +17,6 @@ grandparent_dir = os.path.abspath(os.path.join(current_dir, "..", ".."))
 sys.path.append(grandparent_dir)
 
 from utils.profiler import Profiler
-from utils.similarity_utils import SimilarityEvaluator
 from utils.fault_injector import FaultInjector
 from train_mapping_model import LayerAwareResidualMLP
 
@@ -70,6 +69,14 @@ def append_jsonl(path, data):
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(to_jsonable(data), ensure_ascii=False) + "\n")
 
+
+def load_clean_answers(golden_json):
+    with open(golden_json, "r", encoding="utf-8") as f:
+        samples = json.load(f)
+    return {int(item["id"]): item.get("pre_answer", "") for item in samples}
+
+
+
 def build_result_record(
     idx,
     before_score,
@@ -88,7 +95,7 @@ def build_result_record(
         "before_score": float(before_score),
         "after_score": float(after_score),
         "dtel_score": float(after_score - before_score),
-        "is_sdc": int(before_score != after_score),
+        "is_sdc": int(clean_pred.strip() != pred.strip()),
         "fault": to_jsonable(getattr(injector, "fault_info", None)),
         "image_path": img_path,
         "question": question,
@@ -106,7 +113,7 @@ def evaluate(
     dataset_json,
     output_jsonl,
     device,
-    similarity_evaluator: SimilarityEvaluator,
+    clean_answers,
     mapping_model_path: str = "best_model.pt",
     run_time: int = 0,
     inject_fault: bool = True,
@@ -132,8 +139,8 @@ def evaluate(
         x_dim=64,
         num_layers=28,
         layer_emb_dim=16,
-        hidden_dim=512,
-        num_blocks=8,
+        hidden_dim=64,
+        num_blocks=4,
         dropout=0.1,
     ).to(device)
 
@@ -197,7 +204,9 @@ def evaluate(
             
             trimmed = [o[len(inp):] for inp, o in zip(inputs.input_ids, out_ids)]
             pred = processor.batch_decode(trimmed, skip_special_tokens=True)[0]
-            before_score, after_score, clean_pred = similarity_evaluator.get_fault_scores(pred, sample_id)
+            before_score = 0
+            after_score = 0
+            clean_pred = clean_answers.get(sample_id, "")
 
             prof.finalize()
             sample_result = prof.get_attn_proj_model_compare_result(
@@ -222,7 +231,7 @@ def evaluate(
             if inject_fault is False or run_time < 1:
                 append_jsonl(output_jsonl, result)
             else:
-                if before_score != after_score:
+                if clean_pred.strip() != pred.strip():
                     append_jsonl(output_jsonl, result)
                    
             injector.unregister_hooks()
@@ -236,10 +245,10 @@ def evaluate(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", type=str, default="/data1/home/dataset_share/wsh_data/data/qwen/Qwen2___5-VL-7B-Instruct")
-    parser.add_argument("--data_dir", type=str, default="/data0/home/lc/cd/llm/datasets/EarthVLSet/EarthVQA/Train/images_png")
-    parser.add_argument("--dataset_json", type=str, default="/data0/home/lc/cd/llm/datasets/EarthVLSet/EarthVQA/Train_QA.json")
-    parser.add_argument("--output_jsonl", type=str, default="/data1/home/dataset_share/cd_data/Qwen2.5-VL-7B/EarthVQA/final/detect_EarthVQA_Qwen_with_sem_project.jsonl")
+    parser.add_argument("--model_path", type=str, default="/data01/cd_workspace/llm/Qwen2.5-VL-7B-Instruct")
+    parser.add_argument("--data_dir", type=str, default="/data01/cd_workspace/llm/EarthVQA/Train/images_png")
+    parser.add_argument("--dataset_json", type=str, default="/data01/cd_workspace/llm/EarthVQA/Train_QA.json")
+    parser.add_argument("--output_jsonl", type=str, default="./json/detect_EarthVQA_Qwen_with_sem_project.jsonl")
     parser.add_argument("--golden_json", type=str, default="./json/Golden_EarthVQA_Qwen2.5-VL-7B_30_CA.json")
     parser.add_argument("--mapping_model", type=str, default="./model/best_mapping_model.pt")
     parser.add_argument("--device", type=str, default="cuda:0")
@@ -249,7 +258,7 @@ def main():
     set_model_seed(42)
 
     device = torch.device(args.device)
-    similarity_evaluator = SimilarityEvaluator(json_path=args.golden_json)
+    clean_answers = load_clean_answers(args.golden_json)
 
     evaluate(
         model_path=args.model_path,
@@ -257,13 +266,13 @@ def main():
         dataset_json=args.dataset_json,
         output_jsonl=args.output_jsonl,
         device=device,
-        similarity_evaluator=similarity_evaluator,
+        clean_answers=clean_answers,
         mapping_model_path=args.mapping_model,
         inject_fault=False,
         max_new_tokens=50,
         max_samples=args.max_samples,
     )
-    for run in range(8):
+    for run in range(16):
         random.seed(42 + run)
         evaluate(
             model_path=args.model_path,
@@ -271,7 +280,7 @@ def main():
             dataset_json=args.dataset_json,
             output_jsonl=args.output_jsonl,
             device=device,
-            similarity_evaluator=similarity_evaluator,
+            clean_answers=clean_answers,
             mapping_model_path=args.mapping_model,
             run_time=run,
             inject_fault=True,

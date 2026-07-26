@@ -4,8 +4,8 @@ from PIL import Image
 import io
 import os
 
-PARQUET_PATH = "/data0/home/lc/cd/predict_error/Detect_SDC/Qwen2.5-VL-7B/VQAv2/validation-00000-of-00068.parquet"
-OUTPUT_DIR = "/data0/home/lc/cd/predict_error/Detect_SDC/Qwen2.5-VL-7B/VQAv2/visualized_images2"
+PARQUET_PATH = "/data01/cd_workspace/llm/VQAv2/validation-00000-of-00068.parquet"
+OUTPUT_DIR = "./visualized_images2"
 NUM_IMAGES = 100
 
 def load_parquet(path):

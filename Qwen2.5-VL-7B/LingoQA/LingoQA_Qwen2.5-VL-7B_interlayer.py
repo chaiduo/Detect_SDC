@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 import sys,json,random
 import torch
 import numpy as np
@@ -10,7 +10,9 @@ from collections import defaultdict, Counter
 from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
 from qwen_vl_utils import process_vision_info
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+current_dir = os.path.dirname(__file__)
+grandparent_dir = os.path.abspath(os.path.join(current_dir, "..", ".."))
+sys.path.append(grandparent_dir)
 from utils.Lingo_judge import ScoreEvaluator
 from utils.fault_injector import FaultInjector
 from utils.profiler import Profiler
@@ -202,11 +204,11 @@ def main():
     set_model_seed(42)
 
     device = torch.device("cuda:0")
-    model_path = "/data1/home/dataset_share/wsh_data/data/qwen/Qwen2___5-VL-7B-Instruct"
-    val_file = "/data0/home/lc/cd/predict_error/LingoQA-main/data/val/val.parquet"
-    data_dir = "/data0/home/lc/cd/predict_error/LingoQA-main/data/val/"
-    output_jsonl = "/data1/home/dataset_share/cd_data/Qwen2.5-VL-7B/LingoQA/detect_LingoQA_Qwen_with_inter_layer.jsonl"
-    score_evaluator = ScoreEvaluator(json_path="./Golden_LingoQA_Qwen2.5-VL-7B.json")
+    model_path = "/data01/cd_workspace/llm/Qwen2.5-VL-7B-Instruct"
+    val_file = "/data01/cd_workspace/llm/LingoQA/val.parquet"
+    data_dir = "/data01/cd_workspace/llm/LingoQA/"
+    output_jsonl = "./json/detect_LingoQA_Qwen_with_inter_layer.jsonl"
+    score_evaluator = ScoreEvaluator(json_path="./json/Golden_LingoQA_Qwen2.5-VL-7B.json")
 
     for run in range(2):
         random.seed(42 + run)

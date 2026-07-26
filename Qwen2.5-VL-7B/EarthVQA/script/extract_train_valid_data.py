@@ -1,21 +1,19 @@
 import json
 import math
 import csv
+import os
 from collections import defaultdict
 
 import pandas as pd
 import numpy as np
-from nltk.translate.meteor_score import meteor_score
-import nltk
 from tqdm import tqdm
-from sentence_transformers import CrossEncoder
-from sklearn.model_selection import train_test_split, GroupShuffleSplit
+from sklearn.model_selection import GroupShuffleSplit
 
 
 # =========================
 # 配置区域
 # =========================
-INPUT_JSON = "/data1/home/dataset_share/cd_data/Qwen2.5-VL-7B/EarthVQA/final/detect_EarthVQA_Qwen_with_sem_project.jsonl"
+INPUT_JSON = "/data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project_labeled.jsonl"
 
 SELECTED_LAYER_PAIRS = [
     (6,7),
@@ -41,6 +39,8 @@ LAST_K_STEPS = 50  # 只统计最后 k 个 step
 
 class SimilarityEvaluator:
     def __init__(self, model_name):
+        from sentence_transformers import CrossEncoder
+
         self.model = CrossEncoder(model_name)
 
     def score(self, text1, text2):
@@ -48,10 +48,48 @@ class SimilarityEvaluator:
 
 
 def compute_bleu_and_meteor(reference_sentence, candidate_sentence):
+    import nltk
+    from nltk.translate.meteor_score import meteor_score
+
     reference_tokens = nltk.word_tokenize(reference_sentence.lower())
     candidate_tokens = nltk.word_tokenize(candidate_sentence.lower())
     meteor = meteor_score([reference_tokens], candidate_tokens)
     return meteor
+
+
+def build_label_and_significance(sample):
+    """
+    生成三分类监督标签：
+    - label=0: pred_answer == clean_answer
+    - label=1: pred_answer != clean_answer 且 significance in {0, 1}
+    - label=2: pred_answer != clean_answer 且 significance == 2
+    - significance: Prometheus 打出的严重程度标签
+    -1 或缺失表示解析失败，不能用于监督训练；答案精确一致时直接归为 0。
+    """
+    if "significance" not in sample:
+        return None, None
+
+    try:
+        significance = int(sample.get("significance"))
+    except (TypeError, ValueError):
+        return None, None
+
+    pred_answer = str(sample.get("pred_answer", ""))
+    clean_answer = str(sample.get("clean_answer", ""))
+    if pred_answer == clean_answer:
+        significance = 0
+
+    if significance not in (0, 1, 2):
+        return None, None
+
+    if pred_answer == clean_answer:
+        label = 0
+    elif significance == 2:
+        label = 2
+    else:
+        label = 1
+
+    return label, significance
 
 
 # =========================
@@ -169,25 +207,9 @@ def extract_features_from_sample(sample, sample_idx, last_k_steps=10):
     if not records:
         return None
 
-    dtel_score = abs(sample.get("dtel_score", 0))
-    pred_answer = str(sample.get("pred_answer", ""))
-    # label = sample.get("label", 0)
-    # if label == -1:
-    #     return None
-    label = 0
-    if dtel_score == 0:
-        label = 0
-    elif dtel_score <= 0.5:
-        label = 1
-    else:
-        label = 2
-
-    if dtel_score != 0:
-        fault = sample.get("fault", None)
-        if fault is not None:
-            after = float(fault.get("after", None))
-            if math.isnan(after) or pred_answer.startswith("!!!!!!") or pred_answer.endswith("!!!!!!"):
-                label = 2
+    label, significance = build_label_and_significance(sample)
+    if label is None:
+        return None
 
     orig_id = sample.get("id", None)
     sample_uid = f"{orig_id}_{sample_idx}"
@@ -210,6 +232,7 @@ def extract_features_from_sample(sample, sample_idx, last_k_steps=10):
         "last_k_steps": last_k_steps,
         "num_steps_used": len(window_steps),
         **feat,
+        "significance": significance,
         "label": label
     }
 
@@ -224,9 +247,6 @@ def main():
     all_rows = []
 
     for sample_idx, sample in enumerate(tqdm(data, desc="Processing samples")):
-        id = sample.get("id")
-        if id >= 3000:
-            continue
         row = extract_features_from_sample(
             sample,
             sample_idx=sample_idx,
@@ -240,7 +260,7 @@ def main():
     feature_cols = [
         c for c in df.columns
         if c not in ["orig_id", "sample_uid", "total_steps", "last_k_steps",
-                     "num_steps_used", "label"]
+                     "num_steps_used", "significance", "label"]
     ]
 
     print("特征数 =", len(feature_cols))
@@ -265,7 +285,8 @@ def main():
     assert len(overlap) == 0, "train 和 valid 的 orig_id 有重叠，存在泄漏风险"
 
     import os
-    output_dir = "./train_data"
+    dataset_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    output_dir = os.path.join(dataset_dir, "train_data")
     os.makedirs(output_dir, exist_ok=True)
     train_df.to_csv(os.path.join(output_dir, "Qwen2.5_EarthVQA_train_set.csv"), index=False, encoding="utf-8-sig")
     valid_df.to_csv(os.path.join(output_dir, "Qwen2.5_EarthVQA_valid_set.csv"), index=False, encoding="utf-8-sig")
@@ -280,5 +301,5 @@ def main():
 
 
 if __name__ == "__main__":
-    se = SimilarityEvaluator("/data0/home/lc/cd/stsb-roberta-base")
+    # se = SimilarityEvaluator(os.environ.get("SIMILARITY_MODEL", "cross-encoder/stsb-roberta-base"))
     main()

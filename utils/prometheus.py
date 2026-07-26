@@ -2,8 +2,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 device = "cuda:7"
 
-model = AutoModelForCausalLM.from_pretrained("/data0/home/lc/cd/llm/prometheus/")
-tokenizer = AutoTokenizer.from_pretrained("/data0/home/lc/cd/llm/prometheus/")
+model = AutoModelForCausalLM.from_pretrained("/data01/cd_workspace/llm/prometheus-7b-v2.0")
+tokenizer = AutoTokenizer.from_pretrained("/data01/cd_workspace/llm/prometheus-7b-v2.0")
 
 ABS_SYSTEM_PROMPT = "You are a fair judge assistant tasked with providing clear, objective feedback based on specific criteria, ensuring each assessment reflects the absolute standards set for performance."
 

@@ -1,5 +1,5 @@
 import os, sys
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 import json
 import numpy as np
 import pandas as pd
@@ -91,9 +91,9 @@ def evaluate(
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", type=str, default="/data1/home/dataset_share/wsh_data/data/qwen/Qwen2___5-VL-7B-Instruct")
-    parser.add_argument("--val_file", type=str, default="/data0/home/lc/cd/predict_error/LingoQA-main/data/val/val.parquet")
-    parser.add_argument("--data_dir", type=str, default="/data0/home/lc/cd/predict_error/LingoQA-main/data/val/")
+    parser.add_argument("--model_path", type=str, default="/data01/cd_workspace/llm/Qwen2.5-VL-7B-Instruct")
+    parser.add_argument("--val_file", type=str, default="/data01/cd_workspace/llm/LingoQA/val.parquet")
+    parser.add_argument("--data_dir", type=str, default="/data01/cd_workspace/llm/LingoQA/")
     parser.add_argument("--golden_json", type=str, default="./json/Golden_LingoQA_Qwen2.5-VL-7B.json")
     parser.add_argument("--device", type=str, default="cuda:0")
     args = parser.parse_args()

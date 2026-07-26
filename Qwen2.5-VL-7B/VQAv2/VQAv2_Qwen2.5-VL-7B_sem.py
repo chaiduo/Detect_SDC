@@ -1,11 +1,12 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
 import sys
 import io
 import json
 import glob
 import random
+import argparse
 from pathlib import Path
 from collections import defaultdict, Counter
 
@@ -21,9 +22,7 @@ grandparent_dir = os.path.abspath(os.path.join(current_dir, "..", ".."))
 sys.path.append(grandparent_dir)
 
 from utils.profiler import Profiler
-from utils.Lingo_judge import ScoreEvaluator
 from utils.fault_injector import FaultInjector
-from utils.similarity_utils import SimilarityEvaluator
 from train_mapping_model import LayerAwareResidualMLP
 
 
@@ -79,6 +78,12 @@ def append_jsonl(path, data):
         f.write(json.dumps(to_jsonable(data), ensure_ascii=False) + "\n")
 
 
+def load_clean_answers(golden_json):
+    with open(golden_json, "r", encoding="utf-8") as f:
+        samples = json.load(f)
+    return {int(item["id"]): item.get("pre_answer", "") for item in samples}
+
+
 def build_result_record(
     idx,
     before_score,
@@ -97,7 +102,7 @@ def build_result_record(
         "before_score": float(before_score),
         "after_score": float(after_score),
         "dtel_score": float(after_score - before_score),
-        "is_sdc": int(before_score != after_score),
+        "is_sdc": int(clean_pred.strip() != pred.strip()),
         "fault": injector.fault_info,
         "source_file": source_file,
         "row_idx": int(row_idx),
@@ -186,7 +191,8 @@ def evaluate(
     parquet_path,
     output_jsonl,
     device,
-    similarity_evaluator: SimilarityEvaluator,
+    clean_answers,
+    mapping_model_path,
     run_time: int = 0,
     inject_fault: bool = True,
     max_new_tokens: int = 100,
@@ -218,12 +224,12 @@ def evaluate(
         x_dim=64,
         num_layers=28,
         layer_emb_dim=16,
-        hidden_dim=1024,
-        num_blocks=8,
+        hidden_dim=64,
+        num_blocks=4,
         dropout=0.1,
     ).to(device)
 
-    state_dict = torch.load("best_model-project.pt", map_location=device)
+    state_dict = torch.load(mapping_model_path, map_location=device)
     mapping_model.load_state_dict(state_dict)
     mapping_model.eval()
 
@@ -280,7 +286,9 @@ def evaluate(
             pred = processor.batch_decode(trimmed, skip_special_tokens=True)[0].strip()
 
             prof.finalize()
-            before_score, after_score, clean_pred = similarity_evaluator.get_fault_scores(pred, sample_id)
+            before_score = 0
+            after_score = 0
+            clean_pred = clean_answers.get(sample_id, "")
 
             # sample_result = prof.get_attn_proj_model_diff_vector_result(
             #     predictor_model=mapping_model,
@@ -309,7 +317,7 @@ def evaluate(
             if (not inject_fault) or (run_time < 1):
                 append_jsonl(output_jsonl, result)
             else:
-                if before_score != after_score:
+                if clean_pred.strip() != pred.strip():
                     append_jsonl(output_jsonl, result)
 
             injector.unregister_hooks()
@@ -325,40 +333,49 @@ def evaluate(
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_path", type=str, default="/data01/cd_workspace/llm/Qwen2.5-VL-7B-Instruct")
+    parser.add_argument("--parquet_path", type=str, default="/data01/cd_workspace/llm/VQAv2")
+    parser.add_argument("--output_jsonl", type=str, default="./json/detect_VQAv2_Qwen_with_sem_project.jsonl")
+    parser.add_argument("--golden_json", type=str, default="./json/Golden_VQAv2_Qwen2.5-VL-7B_30_new.json")
+    parser.add_argument("--mapping_model", type=str, default="./model/best_mapping_model.pt")
+    parser.add_argument("--device", type=str, default="cuda:0")
+    parser.add_argument("--max_samples", type=int, default=5000)
+    parser.add_argument("--max_new_tokens", type=int, default=50)
+    args = parser.parse_args()
+
     set_model_seed(42)
 
-    device = torch.device("cuda:0")
-    model_path = "/data1/home/dataset_share/wsh_data/data/qwen/Qwen2___5-VL-7B-Instruct"
-    parquet_path = "/data0/home/lc/cd/predict_error/Detect_SDC/Qwen2.5-VL-7B/VQAv2/train_data"
-    output_jsonl = "/data1/home/dataset_share/cd_data/Qwen2.5-VL-7B/VQAv2/final/detect_VQAv2_Qwen_with_sem_project.jsonl"
+    device = torch.device(args.device)
 
-    se = SimilarityEvaluator(json_path="./json/Golden_VQAv2_Qwen2.5-VL-7B_30_new.json")
+    clean_answers = load_clean_answers(args.golden_json)
     # clean run
-    # evaluate(
-    #     model_path=model_path,
-    #     parquet_path=parquet_path,
-    #     output_jsonl=output_jsonl,
-    #     device=device,
-    #     similarity_evaluator=se,
-    #     inject_fault=False,
-    #     max_new_tokens=50,
-    #     max_samples=5000,
-    # )
+    evaluate(
+        model_path=args.model_path,
+        parquet_path=args.parquet_path,
+        output_jsonl=args.output_jsonl,
+        device=device,
+        clean_answers=clean_answers,
+        mapping_model_path=args.mapping_model,
+        inject_fault=False,
+        max_new_tokens=args.max_new_tokens,
+        max_samples=args.max_samples,
+    )
 
     # fault runs
-    for run in range(2):
-        run += 7
+    for run in range(8):
         random.seed(42 + run)
         evaluate(
-            model_path=model_path,
-            parquet_path=parquet_path,
-            output_jsonl=output_jsonl,
+            model_path=args.model_path,
+            parquet_path=args.parquet_path,
+            output_jsonl=args.output_jsonl,
             device=device,
-            similarity_evaluator=se,
+            clean_answers=clean_answers,
+            mapping_model_path=args.mapping_model,
             run_time=run,
             inject_fault=True,
-            max_new_tokens=50,
-            max_samples=5000,
+            max_new_tokens=args.max_new_tokens,
+            max_samples=args.max_samples,
         )
 
 

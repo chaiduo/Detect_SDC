@@ -1,7 +1,7 @@
 import json
 
-INPUT_JSONL = "/data1/home/dataset_share/cd_data/Qwen2.5-VL-7B/EarthVQA/final/detect_EarthVQA_Qwen_with_sem_project.jsonl"
-OUTPUT_JSONL = "/data1/home/dataset_share/cd_data/Qwen2.5-VL-7B/EarthVQA/final/detect_EarthVQA_Qwen_with_sem_project_id_mod4_01.jsonl"
+INPUT_JSONL = "/data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project.jsonl"
+OUTPUT_JSONL = "/data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project_id_mod4_01.jsonl"
 
 def main():
     count = 0

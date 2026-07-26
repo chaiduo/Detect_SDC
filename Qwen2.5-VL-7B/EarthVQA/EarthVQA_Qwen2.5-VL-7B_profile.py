@@ -112,9 +112,9 @@ def evaluate(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", type=str, default="/data1/home/dataset_share/wsh_data/data/qwen/Qwen2___5-VL-7B-Instruct")
-    parser.add_argument("--data_dir", type=str, default="/data0/home/lc/cd/llm/datasets/EarthVLSet/EarthVQA/Train/images_png")
-    parser.add_argument("--dataset_json", type=str, default="/data0/home/lc/cd/llm/datasets/EarthVLSet/EarthVQA/Train_QA.json")
+    parser.add_argument("--model_path", type=str, default="/data01/cd_workspace/llm/Qwen2.5-VL-7B-Instruct")
+    parser.add_argument("--data_dir", type=str, default="/data01/cd_workspace/llm/EarthVQA/Train/images_png")
+    parser.add_argument("--dataset_json", type=str, default="/data01/cd_workspace/llm/EarthVQA/Train_QA.json")
     parser.add_argument("--golden_json", type=str, default="./json/Golden_EarthVQA_Qwen2.5-VL-7B_30_CA.json")
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--max_samples", type=int, default=5000)
