@@ -193,7 +193,7 @@ def sample_weights(y):
 def build_xgb_binary_classifier():
     return XGBClassifier(
         n_estimators=10000,
-        learning_rate=0.02,
+        learning_rate=0.01,
         max_depth=6,
         min_child_weight=1,
         subsample=0.9,

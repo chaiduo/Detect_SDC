@@ -151,7 +151,7 @@ def split_train_test(df, group_col):
 def build_xgb_binary_classifier(scale_pos_weight):
     return XGBClassifier(
         n_estimators=10000,
-        learning_rate=0.02,
+        learning_rate=0.01,
         max_depth=6,
         min_child_weight=1,
         subsample=0.9,
