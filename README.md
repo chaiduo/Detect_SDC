@@ -37,6 +37,11 @@ Torch, Transformers, Qwen, and LLaVA dependencies are imported lazily by the
 model and labeling adapters. Configuration inspection and dry-runs do not load
 model weights.
 
+`detect-sdc config validate configs/experiments/current.yaml` checks the full
+execution contract without loading model weights: matrix/job coverage, adapter
+and trainer imports, callable arguments, input paths, stage output suffixes,
+mapping dimensions and layer counts, split parameters, and fault-run bounds.
+
 ## Canonical labels
 
 - `quality_score`: `0..2`, where higher is better.

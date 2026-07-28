@@ -9,7 +9,7 @@ from typing import Sequence
 
 from .baseline import freeze_baseline
 from .config import load_yaml
-from .experiment import load_experiment
+from .experiment import validate_experiment_configuration
 from .pipeline import PipelineStage
 
 
@@ -168,11 +168,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "config" and args.config_command == "validate":
-        experiment = load_experiment(args.path)
-        experiment.validate_references(args.repository_root)
-        print(f"Configuration valid: {experiment.name}")
-        print(f"Experiment pairs: {len(experiment.matrix)}")
-        print(f"Pipeline stages: {len(experiment.stages)}")
+        summary = validate_experiment_configuration(
+            args.path,
+            repository_root=args.repository_root,
+        )
+        print(f"Configuration valid: {summary['name']}")
+        print(f"Experiment pairs: {summary['pairs']}")
+        print(f"Pipeline stages: {summary['stages']}")
+        print(f"Execution jobs: {summary['jobs']}")
         return 0
 
     if args.command == "featurize":
