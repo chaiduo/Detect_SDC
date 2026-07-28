@@ -1,22 +1,22 @@
-import os
+"""Compatibility entry point for the shared detector trainer."""
+
+from pathlib import Path
 import sys
 
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
-sys.path.insert(0, PROJECT_DIR)
-
-from ternary_xgboost_common import run_ternary_xgboost_compare_nan_modes
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
 
-TRAIN_CSV = "/data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_train_set.csv"
-VALID_CSV = "/data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_valid_set.csv"
-GROUP_COL = "orig_id"
+def main() -> None:
+    from detect_sdc.detector import run_detector_job
+
+    run_detector_job(
+        config_path=REPOSITORY_ROOT / "configs/experiments/current.yaml",
+        job_name="qwen25_vl_lingoqa",
+        repository_root=REPOSITORY_ROOT,
+    )
 
 
 if __name__ == "__main__":
-    run_ternary_xgboost_compare_nan_modes(
-        train_csv=TRAIN_CSV,
-        valid_csv=VALID_CSV,
-        group_col=GROUP_COL,
-    )
+    main()

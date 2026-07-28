@@ -1,0 +1,3673 @@
+schema_version: 1
+baseline_id: pre_refactor_20260727
+created_at: '2026-07-27T15:17:46.222981+00:00'
+purpose: Pre-refactor behavioral and data baseline
+source_revision:
+  commit: c193dc035dcd99e75305277498b502685bda5dde
+  branch: main
+  dirty: false
+  note: Worktree was verified clean immediately before the refactor files were added.
+capture_revision:
+  commit: c193dc035dcd99e75305277498b502685bda5dde
+  branch: main
+  dirty: true
+  status:
+  - ?? configs/
+  - ?? pyproject.toml
+  - ?? src/
+environment:
+  python: 3.12.13
+  platform: Linux-6.6.122.bsk.1-p2p-amd64-x86_64-with-glibc2.36
+  dependencies:
+    numpy: 2.4.6
+    pandas: 3.0.3
+    scikit-learn: 1.9.0
+    xgboost: null
+    torch: 2.11.0+cu128
+    transformers: 5.12.0
+    PyYAML: 6.0.3
+spec:
+  path: /data01/cd_workspace/Detect_SDC/configs/baseline.yaml
+  sha256: 2832fc371c43af06dda587575a30748b8d7d543f1fd1537693964e540ac79945
+experiments:
+- name: qwen25_vl_earthvqa
+  model: qwen25_vl
+  dataset: earthvqa
+  files:
+    labeled_jsonl:
+      role: labeled_jsonl
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project_labeled.jsonl
+      exists: true
+      size_bytes: 7327142750
+      mtime_ns: 1784816039135555937
+      sha256: 85d00c68b8b241da8e6eeb36d57c2f454ecba292f8ad4a9f69b76ce9d0241626
+      rows: 33026
+    train_csv:
+      role: train_csv
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_train_set.csv
+      exists: true
+      size_bytes: 38725221
+      mtime_ns: 1785163874753272939
+      sha256: 85c850f8eb0d14e63a9dd746eb892ff61c1e4b0e70354a5ce5620ed13f973937
+      data_summary:
+        rows: 27670
+        columns:
+        - orig_id
+        - sample_uid
+        - total_steps
+        - last_k_steps
+        - num_steps_used
+        - cos_sim_mean_p6_7
+        - cos_sim_max_p6_7
+        - cos_sim_min_p6_7
+        - mean_diff_mean_p6_7
+        - mean_diff_max_p6_7
+        - mean_diff_min_p6_7
+        - std_diff_mean_p6_7
+        - std_diff_max_p6_7
+        - std_diff_min_p6_7
+        - cos_sim_mean_p22_23
+        - cos_sim_max_p22_23
+        - cos_sim_min_p22_23
+        - mean_diff_mean_p22_23
+        - mean_diff_max_p22_23
+        - mean_diff_min_p22_23
+        - std_diff_mean_p22_23
+        - std_diff_max_p22_23
+        - std_diff_min_p22_23
+        - cos_sim_mean_p23_24
+        - cos_sim_max_p23_24
+        - cos_sim_min_p23_24
+        - mean_diff_mean_p23_24
+        - mean_diff_max_p23_24
+        - mean_diff_min_p23_24
+        - std_diff_mean_p23_24
+        - std_diff_max_p23_24
+        - std_diff_min_p23_24
+        - cos_sim_mean_p24_25
+        - cos_sim_max_p24_25
+        - cos_sim_min_p24_25
+        - mean_diff_mean_p24_25
+        - mean_diff_max_p24_25
+        - mean_diff_min_p24_25
+        - std_diff_mean_p24_25
+        - std_diff_max_p24_25
+        - std_diff_min_p24_25
+        - cos_sim_mean_p25_26
+        - cos_sim_max_p25_26
+        - cos_sim_min_p25_26
+        - mean_diff_mean_p25_26
+        - mean_diff_max_p25_26
+        - mean_diff_min_p25_26
+        - std_diff_mean_p25_26
+        - std_diff_max_p25_26
+        - std_diff_min_p25_26
+        - cos_sim_mean_p26_27
+        - cos_sim_max_p26_27
+        - cos_sim_min_p26_27
+        - mean_diff_mean_p26_27
+        - mean_diff_max_p26_27
+        - mean_diff_min_p26_27
+        - std_diff_mean_p26_27
+        - std_diff_max_p26_27
+        - std_diff_min_p26_27
+        - l2_distance_mean_p6_7
+        - l2_distance_max_p6_7
+        - l2_distance_min_p6_7
+        - l2_distance_mean_p22_23
+        - l2_distance_max_p22_23
+        - l2_distance_min_p22_23
+        - l2_distance_mean_p23_24
+        - l2_distance_max_p23_24
+        - l2_distance_min_p23_24
+        - l2_distance_mean_p24_25
+        - l2_distance_max_p24_25
+        - l2_distance_min_p24_25
+        - l2_distance_mean_p25_26
+        - l2_distance_max_p25_26
+        - l2_distance_min_p25_26
+        - l2_distance_mean_p26_27
+        - l2_distance_max_p26_27
+        - l2_distance_min_p26_27
+        - significance
+        - label
+        column_count: 79
+        unique_orig_ids: 4250
+        unique_sample_uids: 27670
+        label_counts:
+          '0': 6619
+          '1': 19920
+          '2': 1131
+        significance_counts:
+          '0': 24946
+          '1': 1593
+          '2': 1131
+        significant_sdc_target_counts:
+          '0': 26539
+          '1': 1131
+    valid_csv:
+      role: valid_csv
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_valid_set.csv
+      exists: true
+      size_bytes: 6777654
+      mtime_ns: 1785163875191289788
+      sha256: ccab62adf3c7bbc065e92656a116a3548a9046e33c524ed9ad82c31eb18ca2c4
+      data_summary:
+        rows: 4834
+        columns:
+        - orig_id
+        - sample_uid
+        - total_steps
+        - last_k_steps
+        - num_steps_used
+        - cos_sim_mean_p6_7
+        - cos_sim_max_p6_7
+        - cos_sim_min_p6_7
+        - mean_diff_mean_p6_7
+        - mean_diff_max_p6_7
+        - mean_diff_min_p6_7
+        - std_diff_mean_p6_7
+        - std_diff_max_p6_7
+        - std_diff_min_p6_7
+        - cos_sim_mean_p22_23
+        - cos_sim_max_p22_23
+        - cos_sim_min_p22_23
+        - mean_diff_mean_p22_23
+        - mean_diff_max_p22_23
+        - mean_diff_min_p22_23
+        - std_diff_mean_p22_23
+        - std_diff_max_p22_23
+        - std_diff_min_p22_23
+        - cos_sim_mean_p23_24
+        - cos_sim_max_p23_24
+        - cos_sim_min_p23_24
+        - mean_diff_mean_p23_24
+        - mean_diff_max_p23_24
+        - mean_diff_min_p23_24
+        - std_diff_mean_p23_24
+        - std_diff_max_p23_24
+        - std_diff_min_p23_24
+        - cos_sim_mean_p24_25
+        - cos_sim_max_p24_25
+        - cos_sim_min_p24_25
+        - mean_diff_mean_p24_25
+        - mean_diff_max_p24_25
+        - mean_diff_min_p24_25
+        - std_diff_mean_p24_25
+        - std_diff_max_p24_25
+        - std_diff_min_p24_25
+        - cos_sim_mean_p25_26
+        - cos_sim_max_p25_26
+        - cos_sim_min_p25_26
+        - mean_diff_mean_p25_26
+        - mean_diff_max_p25_26
+        - mean_diff_min_p25_26
+        - std_diff_mean_p25_26
+        - std_diff_max_p25_26
+        - std_diff_min_p25_26
+        - cos_sim_mean_p26_27
+        - cos_sim_max_p26_27
+        - cos_sim_min_p26_27
+        - mean_diff_mean_p26_27
+        - mean_diff_max_p26_27
+        - mean_diff_min_p26_27
+        - std_diff_mean_p26_27
+        - std_diff_max_p26_27
+        - std_diff_min_p26_27
+        - l2_distance_mean_p6_7
+        - l2_distance_max_p6_7
+        - l2_distance_min_p6_7
+        - l2_distance_mean_p22_23
+        - l2_distance_max_p22_23
+        - l2_distance_min_p22_23
+        - l2_distance_mean_p23_24
+        - l2_distance_max_p23_24
+        - l2_distance_min_p23_24
+        - l2_distance_mean_p24_25
+        - l2_distance_max_p24_25
+        - l2_distance_min_p24_25
+        - l2_distance_mean_p25_26
+        - l2_distance_max_p25_26
+        - l2_distance_min_p25_26
+        - l2_distance_mean_p26_27
+        - l2_distance_max_p26_27
+        - l2_distance_min_p26_27
+        - significance
+        - label
+        column_count: 79
+        unique_orig_ids: 750
+        unique_sample_uids: 4834
+        label_counts:
+          '0': 1182
+          '1': 3479
+          '2': 173
+        significance_counts:
+          '0': 4351
+          '1': 310
+          '2': 173
+        significant_sdc_target_counts:
+          '0': 4661
+          '1': 173
+    metrics:
+      role: metrics
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/output/metrics_summary.json
+      exists: true
+      size_bytes: 17109
+      mtime_ns: 1785163999754081426
+      sha256: 9027abe4ca6907e1b8c24bc3abfb9479042912244c100a2e9ba28970e9af349d
+      snapshot:
+        train_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_train_set.csv
+        valid_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_valid_set.csv
+        group_col: orig_id
+        training_nan_policy: keep_all_feature_nan
+        evaluation_splits:
+        - valid_full_metrics
+        - valid_non_all_nan_metrics
+        model_summary:
+          train_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_train_set.csv
+          valid_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_valid_set.csv
+          group_col: orig_id
+          output_subdir: train_with_nan
+          task_type: binary_significant_sdc
+          class_names:
+            '0': non_significant_sdc
+            '1': significant_sdc
+          target_definition:
+            '0': 'non-significant samples: original label in {0, 1}'
+            '1': 'significant_sdc: original label == 2, i.e. pred_answer != clean_answer
+              and significance == 2'
+          feature_count: 72
+          feature_columns:
+          - cos_sim_mean_p6_7
+          - cos_sim_max_p6_7
+          - cos_sim_min_p6_7
+          - mean_diff_mean_p6_7
+          - mean_diff_max_p6_7
+          - mean_diff_min_p6_7
+          - std_diff_mean_p6_7
+          - std_diff_max_p6_7
+          - std_diff_min_p6_7
+          - cos_sim_mean_p22_23
+          - cos_sim_max_p22_23
+          - cos_sim_min_p22_23
+          - mean_diff_mean_p22_23
+          - mean_diff_max_p22_23
+          - mean_diff_min_p22_23
+          - std_diff_mean_p22_23
+          - std_diff_max_p22_23
+          - std_diff_min_p22_23
+          - cos_sim_mean_p23_24
+          - cos_sim_max_p23_24
+          - cos_sim_min_p23_24
+          - mean_diff_mean_p23_24
+          - mean_diff_max_p23_24
+          - mean_diff_min_p23_24
+          - std_diff_mean_p23_24
+          - std_diff_max_p23_24
+          - std_diff_min_p23_24
+          - cos_sim_mean_p24_25
+          - cos_sim_max_p24_25
+          - cos_sim_min_p24_25
+          - mean_diff_mean_p24_25
+          - mean_diff_max_p24_25
+          - mean_diff_min_p24_25
+          - std_diff_mean_p24_25
+          - std_diff_max_p24_25
+          - std_diff_min_p24_25
+          - cos_sim_mean_p25_26
+          - cos_sim_max_p25_26
+          - cos_sim_min_p25_26
+          - mean_diff_mean_p25_26
+          - mean_diff_max_p25_26
+          - mean_diff_min_p25_26
+          - std_diff_mean_p25_26
+          - std_diff_max_p25_26
+          - std_diff_min_p25_26
+          - cos_sim_mean_p26_27
+          - cos_sim_max_p26_27
+          - cos_sim_min_p26_27
+          - mean_diff_mean_p26_27
+          - mean_diff_max_p26_27
+          - mean_diff_min_p26_27
+          - std_diff_mean_p26_27
+          - std_diff_max_p26_27
+          - std_diff_min_p26_27
+          - l2_distance_mean_p6_7
+          - l2_distance_max_p6_7
+          - l2_distance_min_p6_7
+          - l2_distance_mean_p22_23
+          - l2_distance_max_p22_23
+          - l2_distance_min_p22_23
+          - l2_distance_mean_p23_24
+          - l2_distance_max_p23_24
+          - l2_distance_min_p23_24
+          - l2_distance_mean_p24_25
+          - l2_distance_max_p24_25
+          - l2_distance_min_p24_25
+          - l2_distance_mean_p25_26
+          - l2_distance_max_p25_26
+          - l2_distance_min_p25_26
+          - l2_distance_mean_p26_27
+          - l2_distance_max_p26_27
+          - l2_distance_min_p26_27
+          all_feature_nan_filter_stats:
+            training_policy: keep_all_feature_nan
+            drop_all_feature_nan_for_training: false
+            train_all_feature_nan: 823
+            valid_all_feature_nan: 135
+            train_all_feature_nan_label_significance_counts:
+              label=2, significance=2: 823
+            valid_all_feature_nan_label_significance_counts:
+              label=2, significance=2: 135
+          train_full_label_significance_counts:
+            label=0, significance=0: 6619
+            label=1, significance=0: 18327
+            label=1, significance=1: 1593
+            label=2, significance=2: 1131
+          valid_full_label_significance_counts:
+            label=0, significance=0: 1182
+            label=1, significance=0: 3169
+            label=1, significance=1: 310
+            label=2, significance=2: 173
+          train_rows_used: 27670
+          test_rows: 4128
+          valid_full_rows: 4834
+          valid_non_all_nan_rows: 4699
+          train_info:
+            train_distribution:
+              total: 23542
+              counts:
+                '0': 22597
+                '1': 945
+              rates:
+                '0': 0.9598589754481353
+                '1': 0.04014102455186475
+            test_distribution:
+              total: 4128
+              counts:
+                '0': 3942
+                '1': 186
+              rates:
+                '0': 0.9549418604651163
+                '1': 0.04505813953488372
+            class_weights:
+              '0': 0.5209098552905252
+              '1': 12.456084656084656
+            best_iteration: 8
+            best_score: 0.01356589147286822
+          test_metrics:
+            confusion_matrix:
+            - - 3918
+              - 24
+            - - 32
+              - 154
+            accuracy: 0.9864341085271318
+            macro_precision: 0.9285336367515289
+            macro_recall: 0.9109343545932145
+            macro_f1: 0.9195290264727669
+            weighted_precision: 0.9861885073743191
+            weighted_recall: 0.9864341085271318
+            weighted_f1: 0.9862919085652734
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 3942
+                pred_total: 3950
+                tp: 3918
+                fp: 32
+                fn: 24
+                tn: 154
+                precision: 0.9918987341772152
+                recall: 0.9939117199391172
+                f1: 0.9929042067916878
+                prob_mean: 0.5660688877105713
+              '1':
+                name: significant_sdc
+                support: 186
+                pred_total: 178
+                tp: 154
+                fp: 24
+                fn: 32
+                tn: 3918
+                precision: 0.8651685393258427
+                recall: 0.8279569892473119
+                f1: 0.8461538461538461
+                prob_mean: 0.43393105268478394
+            classification_report:
+              non_significant_sdc:
+                precision: 0.9918987341772152
+                recall: 0.9939117199391172
+                f1-score: 0.9929042067916878
+                support: 3942.0
+              significant_sdc:
+                precision: 0.8651685393258427
+                recall: 0.8279569892473119
+                f1-score: 0.8461538461538461
+                support: 186.0
+              accuracy: 0.9864341085271318
+              macro avg:
+                precision: 0.9285336367515289
+                recall: 0.9109343545932145
+                f1-score: 0.9195290264727669
+                support: 4128.0
+              weighted avg:
+                precision: 0.9861885073743191
+                recall: 0.9864341085271318
+                f1-score: 0.9862919085652734
+                support: 4128.0
+            target_class_1:
+              name: significant_sdc
+              support: 186
+              pred_total: 178
+              tp: 154
+              fp: 24
+              fn: 32
+              tn: 3918
+              precision: 0.8651685393258427
+              recall: 0.8279569892473119
+              f1: 0.8461538461538461
+              prob_mean: 0.43393105268478394
+            target_significant_sdc:
+              name: significant_sdc
+              support: 186
+              pred_total: 178
+              tp: 154
+              fp: 24
+              fn: 32
+              tn: 3918
+              precision: 0.8651685393258427
+              recall: 0.8279569892473119
+              f1: 0.8461538461538461
+              prob_mean: 0.43393105268478394
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/output/train_with_nan/significant_sdc_binary_test_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/output/train_with_nan/significant_sdc_binary_test_wrong_predictions.csv
+              wrong_count: 56
+            label_significance_counts:
+              label=0, significance=0: 995
+              label=1, significance=0: 2735
+              label=1, significance=1: 212
+              label=2, significance=2: 186
+          valid_full_metrics:
+            confusion_matrix:
+            - - 4635
+              - 26
+            - - 34
+              - 139
+            accuracy: 0.9875879189077369
+            macro_precision: 0.9175710845875764
+            macro_recall: 0.8989450029949662
+            macro_f1: 0.9080271694666946
+            weighted_precision: 0.9873391912547347
+            weighted_recall: 0.9875879189077369
+            weighted_f1: 0.9874463517379128
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 4661
+                pred_total: 4669
+                tp: 4635
+                fp: 34
+                fn: 26
+                tn: 139
+                precision: 0.9927179267509103
+                recall: 0.9944217978974469
+                f1: 0.9935691318327974
+                prob_mean: 0.5678752064704895
+              '1':
+                name: significant_sdc
+                support: 173
+                pred_total: 165
+                tp: 139
+                fp: 26
+                fn: 34
+                tn: 4635
+                precision: 0.8424242424242424
+                recall: 0.8034682080924855
+                f1: 0.8224852071005917
+                prob_mean: 0.4321248233318329
+            classification_report:
+              non_significant_sdc:
+                precision: 0.9927179267509103
+                recall: 0.9944217978974469
+                f1-score: 0.9935691318327974
+                support: 4661.0
+              significant_sdc:
+                precision: 0.8424242424242424
+                recall: 0.8034682080924855
+                f1-score: 0.8224852071005917
+                support: 173.0
+              accuracy: 0.9875879189077369
+              macro avg:
+                precision: 0.9175710845875764
+                recall: 0.8989450029949662
+                f1-score: 0.9080271694666946
+                support: 4834.0
+              weighted avg:
+                precision: 0.9873391912547347
+                recall: 0.9875879189077369
+                f1-score: 0.9874463517379128
+                support: 4834.0
+            target_class_1:
+              name: significant_sdc
+              support: 173
+              pred_total: 165
+              tp: 139
+              fp: 26
+              fn: 34
+              tn: 4635
+              precision: 0.8424242424242424
+              recall: 0.8034682080924855
+              f1: 0.8224852071005917
+              prob_mean: 0.4321248233318329
+            target_significant_sdc:
+              name: significant_sdc
+              support: 173
+              pred_total: 165
+              tp: 139
+              fp: 26
+              fn: 34
+              tn: 4635
+              precision: 0.8424242424242424
+              recall: 0.8034682080924855
+              f1: 0.8224852071005917
+              prob_mean: 0.4321248233318329
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/output/train_with_nan/significant_sdc_binary_valid_full_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/output/train_with_nan/significant_sdc_binary_valid_full_wrong_predictions.csv
+              wrong_count: 60
+            label_significance_counts:
+              label=0, significance=0: 1182
+              label=1, significance=0: 3169
+              label=1, significance=1: 310
+              label=2, significance=2: 173
+          valid_non_all_nan_metrics:
+            confusion_matrix:
+            - - 4635
+              - 26
+            - - 34
+              - 4
+            accuracy: 0.987231325814003
+            macro_precision: 0.5630256300421218
+            macro_recall: 0.5498424778960919
+            macro_f1: 0.5556080953281634
+            weighted_precision: 0.9857682322308278
+            weighted_recall: 0.987231325814003
+            weighted_f1: 0.9864857015764976
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 4661
+                pred_total: 4669
+                tp: 4635
+                fp: 34
+                fn: 26
+                tn: 4
+                precision: 0.9927179267509103
+                recall: 0.9944217978974469
+                f1: 0.9935691318327974
+                prob_mean: 0.5721940398216248
+              '1':
+                name: significant_sdc
+                support: 38
+                pred_total: 30
+                tp: 4
+                fp: 26
+                fn: 34
+                tn: 4635
+                precision: 0.13333333333333333
+                recall: 0.10526315789473684
+                f1: 0.11764705882352941
+                prob_mean: 0.42780598998069763
+            classification_report:
+              non_significant_sdc:
+                precision: 0.9927179267509103
+                recall: 0.9944217978974469
+                f1-score: 0.9935691318327974
+                support: 4661.0
+              significant_sdc:
+                precision: 0.13333333333333333
+                recall: 0.10526315789473684
+                f1-score: 0.11764705882352941
+                support: 38.0
+              accuracy: 0.987231325814003
+              macro avg:
+                precision: 0.5630256300421218
+                recall: 0.5498424778960919
+                f1-score: 0.5556080953281634
+                support: 4699.0
+              weighted avg:
+                precision: 0.9857682322308278
+                recall: 0.987231325814003
+                f1-score: 0.9864857015764976
+                support: 4699.0
+            target_class_1:
+              name: significant_sdc
+              support: 38
+              pred_total: 30
+              tp: 4
+              fp: 26
+              fn: 34
+              tn: 4635
+              precision: 0.13333333333333333
+              recall: 0.10526315789473684
+              f1: 0.11764705882352941
+              prob_mean: 0.42780598998069763
+            target_significant_sdc:
+              name: significant_sdc
+              support: 38
+              pred_total: 30
+              tp: 4
+              fp: 26
+              fn: 34
+              tn: 4635
+              precision: 0.13333333333333333
+              recall: 0.10526315789473684
+              f1: 0.11764705882352941
+              prob_mean: 0.42780598998069763
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/output/train_with_nan/significant_sdc_binary_valid_non_all_nan_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/output/train_with_nan/significant_sdc_binary_valid_non_all_nan_wrong_predictions.csv
+              wrong_count: 60
+            label_significance_counts:
+              label=0, significance=0: 1182
+              label=1, significance=0: 3169
+              label=1, significance=1: 310
+              label=2, significance=2: 38
+          feature_importance_top20:
+          - feature: l2_distance_mean_p23_24
+            importance: 0.4303615987300873
+          - feature: l2_distance_min_p22_23
+            importance: 0.13649624586105347
+          - feature: std_diff_min_p23_24
+            importance: 0.04024796560406685
+          - feature: mean_diff_min_p24_25
+            importance: 0.022321555763483047
+          - feature: l2_distance_min_p26_27
+            importance: 0.019878093153238297
+          - feature: l2_distance_max_p26_27
+            importance: 0.012299169786274433
+          - feature: mean_diff_max_p22_23
+            importance: 0.011983014643192291
+          - feature: mean_diff_mean_p25_26
+            importance: 0.011238329112529755
+          - feature: l2_distance_max_p23_24
+            importance: 0.011160455644130707
+          - feature: mean_diff_min_p26_27
+            importance: 0.011106884106993675
+          - feature: l2_distance_min_p25_26
+            importance: 0.010575604625046253
+          - feature: mean_diff_mean_p22_23
+            importance: 0.009178534150123596
+          - feature: l2_distance_max_p24_25
+            importance: 0.008992294780910015
+          - feature: mean_diff_max_p24_25
+            importance: 0.008889473043382168
+          - feature: l2_distance_mean_p24_25
+            importance: 0.008875792846083641
+          - feature: cos_sim_max_p25_26
+            importance: 0.008605267852544785
+          - feature: mean_diff_mean_p23_24
+            importance: 0.0075507257133722305
+          - feature: std_diff_max_p25_26
+            importance: 0.007487888913601637
+          - feature: mean_diff_max_p25_26
+            importance: 0.007427317555993795
+          - feature: cos_sim_max_p23_24
+            importance: 0.007332584820687771
+- name: qwen25_vl_lingoqa
+  model: qwen25_vl
+  dataset: lingoqa
+  files:
+    labeled_jsonl:
+      role: labeled_jsonl
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/json/detect_LingoQA_Qwen_with_sem_labeled.jsonl
+      exists: true
+      size_bytes: 4019237221
+      mtime_ns: 1784821920135073700
+      sha256: c0f5144eb0e3f9fadf0a9da5f3a431b1744b6194ea54559360c710a7f35a527c
+      rows: 21140
+    train_csv:
+      role: train_csv
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_train_set.csv
+      exists: true
+      size_bytes: 24826704
+      mtime_ns: 1784647291291835117
+      sha256: 3b13e374cd9d3db226fccdad5d4ab0a2b83805a6ee3cc8c5e8815894c1209546
+      data_summary:
+        rows: 17911
+        columns:
+        - orig_id
+        - sample_uid
+        - total_steps
+        - last_k_steps
+        - num_steps_used
+        - cos_sim_mean_p6_7
+        - cos_sim_max_p6_7
+        - cos_sim_min_p6_7
+        - mean_diff_mean_p6_7
+        - mean_diff_max_p6_7
+        - mean_diff_min_p6_7
+        - std_diff_mean_p6_7
+        - std_diff_max_p6_7
+        - std_diff_min_p6_7
+        - cos_sim_mean_p22_23
+        - cos_sim_max_p22_23
+        - cos_sim_min_p22_23
+        - mean_diff_mean_p22_23
+        - mean_diff_max_p22_23
+        - mean_diff_min_p22_23
+        - std_diff_mean_p22_23
+        - std_diff_max_p22_23
+        - std_diff_min_p22_23
+        - cos_sim_mean_p23_24
+        - cos_sim_max_p23_24
+        - cos_sim_min_p23_24
+        - mean_diff_mean_p23_24
+        - mean_diff_max_p23_24
+        - mean_diff_min_p23_24
+        - std_diff_mean_p23_24
+        - std_diff_max_p23_24
+        - std_diff_min_p23_24
+        - cos_sim_mean_p24_25
+        - cos_sim_max_p24_25
+        - cos_sim_min_p24_25
+        - mean_diff_mean_p24_25
+        - mean_diff_max_p24_25
+        - mean_diff_min_p24_25
+        - std_diff_mean_p24_25
+        - std_diff_max_p24_25
+        - std_diff_min_p24_25
+        - cos_sim_mean_p25_26
+        - cos_sim_max_p25_26
+        - cos_sim_min_p25_26
+        - mean_diff_mean_p25_26
+        - mean_diff_max_p25_26
+        - mean_diff_min_p25_26
+        - std_diff_mean_p25_26
+        - std_diff_max_p25_26
+        - std_diff_min_p25_26
+        - cos_sim_mean_p26_27
+        - cos_sim_max_p26_27
+        - cos_sim_min_p26_27
+        - mean_diff_mean_p26_27
+        - mean_diff_max_p26_27
+        - mean_diff_min_p26_27
+        - std_diff_mean_p26_27
+        - std_diff_max_p26_27
+        - std_diff_min_p26_27
+        - l2_distance_mean_p6_7
+        - l2_distance_max_p6_7
+        - l2_distance_min_p6_7
+        - l2_distance_mean_p22_23
+        - l2_distance_max_p22_23
+        - l2_distance_min_p22_23
+        - l2_distance_mean_p23_24
+        - l2_distance_max_p23_24
+        - l2_distance_min_p23_24
+        - l2_distance_mean_p24_25
+        - l2_distance_max_p24_25
+        - l2_distance_min_p24_25
+        - l2_distance_mean_p25_26
+        - l2_distance_max_p25_26
+        - l2_distance_min_p25_26
+        - l2_distance_mean_p26_27
+        - l2_distance_max_p26_27
+        - l2_distance_min_p26_27
+        - significance
+        - label
+        column_count: 79
+        unique_orig_ids: 4250
+        unique_sample_uids: 17911
+        label_counts:
+          '0': 10703
+          '1': 6123
+          '2': 1085
+        significance_counts:
+          '0': 16687
+          '1': 139
+          '2': 1085
+        significant_sdc_target_counts:
+          '0': 16826
+          '1': 1085
+    valid_csv:
+      role: valid_csv
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_valid_set.csv
+      exists: true
+      size_bytes: 4403028
+      mtime_ns: 1784647291582846351
+      sha256: c91ab707326896fd8b4659af5c9f319949d59b7e69f03744d624aa88cd104cd8
+      data_summary:
+        rows: 3174
+        columns:
+        - orig_id
+        - sample_uid
+        - total_steps
+        - last_k_steps
+        - num_steps_used
+        - cos_sim_mean_p6_7
+        - cos_sim_max_p6_7
+        - cos_sim_min_p6_7
+        - mean_diff_mean_p6_7
+        - mean_diff_max_p6_7
+        - mean_diff_min_p6_7
+        - std_diff_mean_p6_7
+        - std_diff_max_p6_7
+        - std_diff_min_p6_7
+        - cos_sim_mean_p22_23
+        - cos_sim_max_p22_23
+        - cos_sim_min_p22_23
+        - mean_diff_mean_p22_23
+        - mean_diff_max_p22_23
+        - mean_diff_min_p22_23
+        - std_diff_mean_p22_23
+        - std_diff_max_p22_23
+        - std_diff_min_p22_23
+        - cos_sim_mean_p23_24
+        - cos_sim_max_p23_24
+        - cos_sim_min_p23_24
+        - mean_diff_mean_p23_24
+        - mean_diff_max_p23_24
+        - mean_diff_min_p23_24
+        - std_diff_mean_p23_24
+        - std_diff_max_p23_24
+        - std_diff_min_p23_24
+        - cos_sim_mean_p24_25
+        - cos_sim_max_p24_25
+        - cos_sim_min_p24_25
+        - mean_diff_mean_p24_25
+        - mean_diff_max_p24_25
+        - mean_diff_min_p24_25
+        - std_diff_mean_p24_25
+        - std_diff_max_p24_25
+        - std_diff_min_p24_25
+        - cos_sim_mean_p25_26
+        - cos_sim_max_p25_26
+        - cos_sim_min_p25_26
+        - mean_diff_mean_p25_26
+        - mean_diff_max_p25_26
+        - mean_diff_min_p25_26
+        - std_diff_mean_p25_26
+        - std_diff_max_p25_26
+        - std_diff_min_p25_26
+        - cos_sim_mean_p26_27
+        - cos_sim_max_p26_27
+        - cos_sim_min_p26_27
+        - mean_diff_mean_p26_27
+        - mean_diff_max_p26_27
+        - mean_diff_min_p26_27
+        - std_diff_mean_p26_27
+        - std_diff_max_p26_27
+        - std_diff_min_p26_27
+        - l2_distance_mean_p6_7
+        - l2_distance_max_p6_7
+        - l2_distance_min_p6_7
+        - l2_distance_mean_p22_23
+        - l2_distance_max_p22_23
+        - l2_distance_min_p22_23
+        - l2_distance_mean_p23_24
+        - l2_distance_max_p23_24
+        - l2_distance_min_p23_24
+        - l2_distance_mean_p24_25
+        - l2_distance_max_p24_25
+        - l2_distance_min_p24_25
+        - l2_distance_mean_p25_26
+        - l2_distance_max_p25_26
+        - l2_distance_min_p25_26
+        - l2_distance_mean_p26_27
+        - l2_distance_max_p26_27
+        - l2_distance_min_p26_27
+        - significance
+        - label
+        column_count: 79
+        unique_orig_ids: 750
+        unique_sample_uids: 3174
+        label_counts:
+          '0': 1873
+          '1': 1093
+          '2': 208
+        significance_counts:
+          '0': 2920
+          '1': 46
+          '2': 208
+        significant_sdc_target_counts:
+          '0': 2966
+          '1': 208
+    metrics:
+      role: metrics
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/output/metrics_summary.json
+      exists: true
+      size_bytes: 16924
+      mtime_ns: 1785071892952414351
+      sha256: 28644d9de1405c095fa6942004952729b74af3837c5535ee62bc48574c7ef25e
+      snapshot:
+        train_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_train_set.csv
+        valid_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_valid_set.csv
+        group_col: orig_id
+        training_nan_policy: keep_all_feature_nan
+        evaluation_splits:
+        - valid_full_metrics
+        - valid_non_all_nan_metrics
+        model_summary:
+          train_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_train_set.csv
+          valid_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_valid_set.csv
+          group_col: orig_id
+          output_subdir: train_with_nan
+          task_type: binary_significant_sdc
+          class_names:
+            '0': non_significant_sdc
+            '1': significant_sdc
+          target_definition:
+            '0': 'non-significant samples: original label in {0, 1}'
+            '1': 'significant_sdc: original label == 2, i.e. pred_answer != clean_answer
+              and significance == 2'
+          feature_count: 72
+          feature_columns:
+          - cos_sim_mean_p6_7
+          - cos_sim_max_p6_7
+          - cos_sim_min_p6_7
+          - mean_diff_mean_p6_7
+          - mean_diff_max_p6_7
+          - mean_diff_min_p6_7
+          - std_diff_mean_p6_7
+          - std_diff_max_p6_7
+          - std_diff_min_p6_7
+          - cos_sim_mean_p22_23
+          - cos_sim_max_p22_23
+          - cos_sim_min_p22_23
+          - mean_diff_mean_p22_23
+          - mean_diff_max_p22_23
+          - mean_diff_min_p22_23
+          - std_diff_mean_p22_23
+          - std_diff_max_p22_23
+          - std_diff_min_p22_23
+          - cos_sim_mean_p23_24
+          - cos_sim_max_p23_24
+          - cos_sim_min_p23_24
+          - mean_diff_mean_p23_24
+          - mean_diff_max_p23_24
+          - mean_diff_min_p23_24
+          - std_diff_mean_p23_24
+          - std_diff_max_p23_24
+          - std_diff_min_p23_24
+          - cos_sim_mean_p24_25
+          - cos_sim_max_p24_25
+          - cos_sim_min_p24_25
+          - mean_diff_mean_p24_25
+          - mean_diff_max_p24_25
+          - mean_diff_min_p24_25
+          - std_diff_mean_p24_25
+          - std_diff_max_p24_25
+          - std_diff_min_p24_25
+          - cos_sim_mean_p25_26
+          - cos_sim_max_p25_26
+          - cos_sim_min_p25_26
+          - mean_diff_mean_p25_26
+          - mean_diff_max_p25_26
+          - mean_diff_min_p25_26
+          - std_diff_mean_p25_26
+          - std_diff_max_p25_26
+          - std_diff_min_p25_26
+          - cos_sim_mean_p26_27
+          - cos_sim_max_p26_27
+          - cos_sim_min_p26_27
+          - mean_diff_mean_p26_27
+          - mean_diff_max_p26_27
+          - mean_diff_min_p26_27
+          - std_diff_mean_p26_27
+          - std_diff_max_p26_27
+          - std_diff_min_p26_27
+          - l2_distance_mean_p6_7
+          - l2_distance_max_p6_7
+          - l2_distance_min_p6_7
+          - l2_distance_mean_p22_23
+          - l2_distance_max_p22_23
+          - l2_distance_min_p22_23
+          - l2_distance_mean_p23_24
+          - l2_distance_max_p23_24
+          - l2_distance_min_p23_24
+          - l2_distance_mean_p24_25
+          - l2_distance_max_p24_25
+          - l2_distance_min_p24_25
+          - l2_distance_mean_p25_26
+          - l2_distance_max_p25_26
+          - l2_distance_min_p25_26
+          - l2_distance_mean_p26_27
+          - l2_distance_max_p26_27
+          - l2_distance_min_p26_27
+          all_feature_nan_filter_stats:
+            training_policy: keep_all_feature_nan
+            drop_all_feature_nan_for_training: false
+            train_all_feature_nan: 296
+            valid_all_feature_nan: 49
+            train_all_feature_nan_label_significance_counts:
+              label=2, significance=2: 296
+            valid_all_feature_nan_label_significance_counts:
+              label=2, significance=2: 49
+          train_full_label_significance_counts:
+            label=0, significance=0: 10703
+            label=1, significance=0: 5984
+            label=1, significance=1: 139
+            label=2, significance=2: 1085
+          valid_full_label_significance_counts:
+            label=0, significance=0: 1873
+            label=1, significance=0: 1047
+            label=1, significance=1: 46
+            label=2, significance=2: 208
+          train_rows_used: 17911
+          test_rows: 2683
+          valid_full_rows: 3174
+          valid_non_all_nan_rows: 3125
+          train_info:
+            train_distribution:
+              total: 15228
+              counts:
+                '0': 14306
+                '1': 922
+              rates:
+                '0': 0.9394536380351983
+                '1': 0.06054636196480168
+            test_distribution:
+              total: 2683
+              counts:
+                '0': 2520
+                '1': 163
+              rates:
+                '0': 0.9392471114424152
+                '1': 0.060752888557584796
+            class_weights:
+              '0': 0.5322242415769607
+              '1': 8.258134490238612
+            best_iteration: 569
+            best_score: 0.00372717107715244
+          test_metrics:
+            confusion_matrix:
+            - - 2520
+              - 0
+            - - 10
+              - 153
+            accuracy: 0.9962728289228475
+            macro_precision: 0.9980237154150198
+            macro_recall: 0.9693251533742331
+            macro_f1: 0.9831871161799725
+            weighted_precision: 0.9962875608243382
+            weighted_recall: 0.9962728289228475
+            weighted_f1: 0.9962175449653364
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 2520
+                pred_total: 2530
+                tp: 2520
+                fp: 10
+                fn: 0
+                tn: 153
+                precision: 0.9960474308300395
+                recall: 1.0
+                f1: 0.998019801980198
+                prob_mean: 0.9402453303337097
+              '1':
+                name: significant_sdc
+                support: 163
+                pred_total: 153
+                tp: 153
+                fp: 0
+                fn: 10
+                tn: 2520
+                precision: 1.0
+                recall: 0.9386503067484663
+                f1: 0.9683544303797469
+                prob_mean: 0.059754662215709686
+            classification_report:
+              non_significant_sdc:
+                precision: 0.9960474308300395
+                recall: 1.0
+                f1-score: 0.998019801980198
+                support: 2520.0
+              significant_sdc:
+                precision: 1.0
+                recall: 0.9386503067484663
+                f1-score: 0.9683544303797469
+                support: 163.0
+              accuracy: 0.9962728289228475
+              macro avg:
+                precision: 0.9980237154150198
+                recall: 0.9693251533742331
+                f1-score: 0.9831871161799725
+                support: 2683.0
+              weighted avg:
+                precision: 0.9962875608243382
+                recall: 0.9962728289228475
+                f1-score: 0.9962175449653364
+                support: 2683.0
+            target_class_1:
+              name: significant_sdc
+              support: 163
+              pred_total: 153
+              tp: 153
+              fp: 0
+              fn: 10
+              tn: 2520
+              precision: 1.0
+              recall: 0.9386503067484663
+              f1: 0.9683544303797469
+              prob_mean: 0.059754662215709686
+            target_significant_sdc:
+              name: significant_sdc
+              support: 163
+              pred_total: 153
+              tp: 153
+              fp: 0
+              fn: 10
+              tn: 2520
+              precision: 1.0
+              recall: 0.9386503067484663
+              f1: 0.9683544303797469
+              prob_mean: 0.059754662215709686
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/output/train_with_nan/significant_sdc_binary_test_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/output/train_with_nan/significant_sdc_binary_test_wrong_predictions.csv
+              wrong_count: 10
+            label_significance_counts:
+              label=0, significance=0: 1620
+              label=1, significance=0: 881
+              label=1, significance=1: 19
+              label=2, significance=2: 163
+          valid_full_metrics:
+            confusion_matrix:
+            - - 2965
+              - 1
+            - - 15
+              - 193
+            accuracy: 0.9949590422180214
+            macro_precision: 0.9949059018888813
+            macro_recall: 0.9637737304839462
+            macro_f1: 0.9787540601734014
+            weighted_precision: 0.9949585081443618
+            weighted_recall: 0.9949590422180214
+            weighted_f1: 0.9948771988743617
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 2966
+                pred_total: 2980
+                tp: 2965
+                fp: 15
+                fn: 1
+                tn: 193
+                precision: 0.9949664429530202
+                recall: 0.9996628455832771
+                f1: 0.9973091153716784
+                prob_mean: 0.9368740916252136
+              '1':
+                name: significant_sdc
+                support: 208
+                pred_total: 194
+                tp: 193
+                fp: 1
+                fn: 15
+                tn: 2965
+                precision: 0.9948453608247423
+                recall: 0.9278846153846154
+                f1: 0.9601990049751243
+                prob_mean: 0.0631258636713028
+            classification_report:
+              non_significant_sdc:
+                precision: 0.9949664429530202
+                recall: 0.9996628455832771
+                f1-score: 0.9973091153716784
+                support: 2966.0
+              significant_sdc:
+                precision: 0.9948453608247423
+                recall: 0.9278846153846154
+                f1-score: 0.9601990049751243
+                support: 208.0
+              accuracy: 0.9949590422180214
+              macro avg:
+                precision: 0.9949059018888813
+                recall: 0.9637737304839462
+                f1-score: 0.9787540601734014
+                support: 3174.0
+              weighted avg:
+                precision: 0.9949585081443618
+                recall: 0.9949590422180214
+                f1-score: 0.9948771988743617
+                support: 3174.0
+            target_class_1:
+              name: significant_sdc
+              support: 208
+              pred_total: 194
+              tp: 193
+              fp: 1
+              fn: 15
+              tn: 2965
+              precision: 0.9948453608247423
+              recall: 0.9278846153846154
+              f1: 0.9601990049751243
+              prob_mean: 0.0631258636713028
+            target_significant_sdc:
+              name: significant_sdc
+              support: 208
+              pred_total: 194
+              tp: 193
+              fp: 1
+              fn: 15
+              tn: 2965
+              precision: 0.9948453608247423
+              recall: 0.9278846153846154
+              f1: 0.9601990049751243
+              prob_mean: 0.0631258636713028
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/output/train_with_nan/significant_sdc_binary_valid_full_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/output/train_with_nan/significant_sdc_binary_valid_full_wrong_predictions.csv
+              wrong_count: 16
+            label_significance_counts:
+              label=0, significance=0: 1873
+              label=1, significance=0: 1047
+              label=1, significance=1: 46
+              label=2, significance=2: 208
+          valid_non_all_nan_metrics:
+            confusion_matrix:
+            - - 2965
+              - 1
+            - - 15
+              - 144
+            accuracy: 0.99488
+            macro_precision: 0.9940349456144411
+            macro_recall: 0.9526616114708839
+            macro_f1: 0.9723387682121549
+            weighted_precision: 0.9948716537838465
+            weighted_recall: 0.99488
+            weighted_f1: 0.9947681328447253
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 2966
+                pred_total: 2980
+                tp: 2965
+                fp: 15
+                fn: 1
+                tn: 144
+                precision: 0.9949664429530202
+                recall: 0.9996628455832771
+                f1: 0.9973091153716784
+                prob_mean: 0.951563835144043
+              '1':
+                name: significant_sdc
+                support: 159
+                pred_total: 145
+                tp: 144
+                fp: 1
+                fn: 15
+                tn: 2965
+                precision: 0.993103448275862
+                recall: 0.9056603773584906
+                f1: 0.9473684210526315
+                prob_mean: 0.04843613877892494
+            classification_report:
+              non_significant_sdc:
+                precision: 0.9949664429530202
+                recall: 0.9996628455832771
+                f1-score: 0.9973091153716784
+                support: 2966.0
+              significant_sdc:
+                precision: 0.993103448275862
+                recall: 0.9056603773584906
+                f1-score: 0.9473684210526315
+                support: 159.0
+              accuracy: 0.99488
+              macro avg:
+                precision: 0.9940349456144411
+                recall: 0.9526616114708839
+                f1-score: 0.9723387682121549
+                support: 3125.0
+              weighted avg:
+                precision: 0.9948716537838465
+                recall: 0.99488
+                f1-score: 0.9947681328447253
+                support: 3125.0
+            target_class_1:
+              name: significant_sdc
+              support: 159
+              pred_total: 145
+              tp: 144
+              fp: 1
+              fn: 15
+              tn: 2965
+              precision: 0.993103448275862
+              recall: 0.9056603773584906
+              f1: 0.9473684210526315
+              prob_mean: 0.04843613877892494
+            target_significant_sdc:
+              name: significant_sdc
+              support: 159
+              pred_total: 145
+              tp: 144
+              fp: 1
+              fn: 15
+              tn: 2965
+              precision: 0.993103448275862
+              recall: 0.9056603773584906
+              f1: 0.9473684210526315
+              prob_mean: 0.04843613877892494
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/output/train_with_nan/significant_sdc_binary_valid_non_all_nan_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/output/train_with_nan/significant_sdc_binary_valid_non_all_nan_wrong_predictions.csv
+              wrong_count: 16
+            label_significance_counts:
+              label=0, significance=0: 1873
+              label=1, significance=0: 1047
+              label=1, significance=1: 46
+              label=2, significance=2: 159
+          feature_importance_top20:
+          - feature: cos_sim_mean_p26_27
+            importance: 0.4632664918899536
+          - feature: l2_distance_min_p26_27
+            importance: 0.08379988372325897
+          - feature: l2_distance_mean_p26_27
+            importance: 0.05133834853768349
+          - feature: cos_sim_max_p26_27
+            importance: 0.045625317841768265
+          - feature: mean_diff_max_p25_26
+            importance: 0.020531870424747467
+          - feature: mean_diff_mean_p26_27
+            importance: 0.019178852438926697
+          - feature: cos_sim_min_p24_25
+            importance: 0.012462262064218521
+          - feature: std_diff_mean_p6_7
+            importance: 0.010645614936947823
+          - feature: std_diff_max_p6_7
+            importance: 0.010051324032247066
+          - feature: std_diff_max_p25_26
+            importance: 0.008493233472108841
+          - feature: std_diff_min_p6_7
+            importance: 0.007839488796889782
+          - feature: l2_distance_min_p24_25
+            importance: 0.007746287155896425
+          - feature: mean_diff_min_p23_24
+            importance: 0.007200691848993301
+          - feature: cos_sim_min_p26_27
+            importance: 0.0070907906629145145
+          - feature: std_diff_mean_p24_25
+            importance: 0.006876975763589144
+          - feature: std_diff_min_p22_23
+            importance: 0.006751631386578083
+          - feature: cos_sim_min_p23_24
+            importance: 0.006632023490965366
+          - feature: mean_diff_mean_p22_23
+            importance: 0.006613045930862427
+          - feature: l2_distance_min_p6_7
+            importance: 0.006580458953976631
+          - feature: l2_distance_max_p23_24
+            importance: 0.006331868004053831
+- name: qwen25_vl_vqav2
+  model: qwen25_vl
+  dataset: vqav2
+  files:
+    labeled_jsonl:
+      role: labeled_jsonl
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/json/detect_VQAv2_Qwen_with_sem_project_labeled.jsonl
+      exists: true
+      size_bytes: 3241013340
+      mtime_ns: 1784821789367038315
+      sha256: 547ebc9cfa700ecadedd09b9df01bd538c75503efc869212fc408379126589b6
+      rows: 16415
+    train_csv:
+      role: train_csv
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_train_set.csv
+      exists: true
+      size_bytes: 19275758
+      mtime_ns: 1784646136180250070
+      sha256: 67b2236685331ac73f2cc1259807a3910edcd8d1e623081bcd17ba338783d8b3
+      data_summary:
+        rows: 13928
+        columns:
+        - orig_id
+        - sample_uid
+        - total_steps
+        - last_k_steps
+        - num_steps_used
+        - cos_sim_mean_p6_7
+        - cos_sim_max_p6_7
+        - cos_sim_min_p6_7
+        - mean_diff_mean_p6_7
+        - mean_diff_max_p6_7
+        - mean_diff_min_p6_7
+        - std_diff_mean_p6_7
+        - std_diff_max_p6_7
+        - std_diff_min_p6_7
+        - cos_sim_mean_p22_23
+        - cos_sim_max_p22_23
+        - cos_sim_min_p22_23
+        - mean_diff_mean_p22_23
+        - mean_diff_max_p22_23
+        - mean_diff_min_p22_23
+        - std_diff_mean_p22_23
+        - std_diff_max_p22_23
+        - std_diff_min_p22_23
+        - cos_sim_mean_p23_24
+        - cos_sim_max_p23_24
+        - cos_sim_min_p23_24
+        - mean_diff_mean_p23_24
+        - mean_diff_max_p23_24
+        - mean_diff_min_p23_24
+        - std_diff_mean_p23_24
+        - std_diff_max_p23_24
+        - std_diff_min_p23_24
+        - cos_sim_mean_p24_25
+        - cos_sim_max_p24_25
+        - cos_sim_min_p24_25
+        - mean_diff_mean_p24_25
+        - mean_diff_max_p24_25
+        - mean_diff_min_p24_25
+        - std_diff_mean_p24_25
+        - std_diff_max_p24_25
+        - std_diff_min_p24_25
+        - cos_sim_mean_p25_26
+        - cos_sim_max_p25_26
+        - cos_sim_min_p25_26
+        - mean_diff_mean_p25_26
+        - mean_diff_max_p25_26
+        - mean_diff_min_p25_26
+        - std_diff_mean_p25_26
+        - std_diff_max_p25_26
+        - std_diff_min_p25_26
+        - cos_sim_mean_p26_27
+        - cos_sim_max_p26_27
+        - cos_sim_min_p26_27
+        - mean_diff_mean_p26_27
+        - mean_diff_max_p26_27
+        - mean_diff_min_p26_27
+        - std_diff_mean_p26_27
+        - std_diff_max_p26_27
+        - std_diff_min_p26_27
+        - l2_distance_mean_p6_7
+        - l2_distance_max_p6_7
+        - l2_distance_min_p6_7
+        - l2_distance_mean_p22_23
+        - l2_distance_max_p22_23
+        - l2_distance_min_p22_23
+        - l2_distance_mean_p23_24
+        - l2_distance_max_p23_24
+        - l2_distance_min_p23_24
+        - l2_distance_mean_p24_25
+        - l2_distance_max_p24_25
+        - l2_distance_min_p24_25
+        - l2_distance_mean_p25_26
+        - l2_distance_max_p25_26
+        - l2_distance_min_p25_26
+        - l2_distance_mean_p26_27
+        - l2_distance_max_p26_27
+        - l2_distance_min_p26_27
+        - significance
+        - label
+        column_count: 79
+        unique_orig_ids: 4249
+        unique_sample_uids: 13928
+        label_counts:
+          '0': 7461
+          '1': 5296
+          '2': 1171
+        significance_counts:
+          '0': 12580
+          '1': 177
+          '2': 1171
+        significant_sdc_target_counts:
+          '0': 12757
+          '1': 1171
+    valid_csv:
+      role: valid_csv
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_valid_set.csv
+      exists: true
+      size_bytes: 3321126
+      mtime_ns: 1784646136399258523
+      sha256: 762b532593c9047360c248a2b6525f62a5230fc43a68dc6b325ebc73e08a8789
+      data_summary:
+        rows: 2416
+        columns:
+        - orig_id
+        - sample_uid
+        - total_steps
+        - last_k_steps
+        - num_steps_used
+        - cos_sim_mean_p6_7
+        - cos_sim_max_p6_7
+        - cos_sim_min_p6_7
+        - mean_diff_mean_p6_7
+        - mean_diff_max_p6_7
+        - mean_diff_min_p6_7
+        - std_diff_mean_p6_7
+        - std_diff_max_p6_7
+        - std_diff_min_p6_7
+        - cos_sim_mean_p22_23
+        - cos_sim_max_p22_23
+        - cos_sim_min_p22_23
+        - mean_diff_mean_p22_23
+        - mean_diff_max_p22_23
+        - mean_diff_min_p22_23
+        - std_diff_mean_p22_23
+        - std_diff_max_p22_23
+        - std_diff_min_p22_23
+        - cos_sim_mean_p23_24
+        - cos_sim_max_p23_24
+        - cos_sim_min_p23_24
+        - mean_diff_mean_p23_24
+        - mean_diff_max_p23_24
+        - mean_diff_min_p23_24
+        - std_diff_mean_p23_24
+        - std_diff_max_p23_24
+        - std_diff_min_p23_24
+        - cos_sim_mean_p24_25
+        - cos_sim_max_p24_25
+        - cos_sim_min_p24_25
+        - mean_diff_mean_p24_25
+        - mean_diff_max_p24_25
+        - mean_diff_min_p24_25
+        - std_diff_mean_p24_25
+        - std_diff_max_p24_25
+        - std_diff_min_p24_25
+        - cos_sim_mean_p25_26
+        - cos_sim_max_p25_26
+        - cos_sim_min_p25_26
+        - mean_diff_mean_p25_26
+        - mean_diff_max_p25_26
+        - mean_diff_min_p25_26
+        - std_diff_mean_p25_26
+        - std_diff_max_p25_26
+        - std_diff_min_p25_26
+        - cos_sim_mean_p26_27
+        - cos_sim_max_p26_27
+        - cos_sim_min_p26_27
+        - mean_diff_mean_p26_27
+        - mean_diff_max_p26_27
+        - mean_diff_min_p26_27
+        - std_diff_mean_p26_27
+        - std_diff_max_p26_27
+        - std_diff_min_p26_27
+        - l2_distance_mean_p6_7
+        - l2_distance_max_p6_7
+        - l2_distance_min_p6_7
+        - l2_distance_mean_p22_23
+        - l2_distance_max_p22_23
+        - l2_distance_min_p22_23
+        - l2_distance_mean_p23_24
+        - l2_distance_max_p23_24
+        - l2_distance_min_p23_24
+        - l2_distance_mean_p24_25
+        - l2_distance_max_p24_25
+        - l2_distance_min_p24_25
+        - l2_distance_mean_p25_26
+        - l2_distance_max_p25_26
+        - l2_distance_min_p25_26
+        - l2_distance_mean_p26_27
+        - l2_distance_max_p26_27
+        - l2_distance_min_p26_27
+        - significance
+        - label
+        column_count: 79
+        unique_orig_ids: 750
+        unique_sample_uids: 2416
+        label_counts:
+          '0': 1313
+          '1': 897
+          '2': 206
+        significance_counts:
+          '0': 2188
+          '1': 22
+          '2': 206
+        significant_sdc_target_counts:
+          '0': 2210
+          '1': 206
+    metrics:
+      role: metrics
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/output/metrics_summary.json
+      exists: true
+      size_bytes: 16896
+      mtime_ns: 1785071897159575547
+      sha256: 814aa5964ac02c31ec3e9580ae1531f7b948dba331cb5ae5e76fc8c42cf7eba6
+      snapshot:
+        train_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_train_set.csv
+        valid_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_valid_set.csv
+        group_col: orig_id
+        training_nan_policy: keep_all_feature_nan
+        evaluation_splits:
+        - valid_full_metrics
+        - valid_non_all_nan_metrics
+        model_summary:
+          train_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_train_set.csv
+          valid_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_valid_set.csv
+          group_col: orig_id
+          output_subdir: train_with_nan
+          task_type: binary_significant_sdc
+          class_names:
+            '0': non_significant_sdc
+            '1': significant_sdc
+          target_definition:
+            '0': 'non-significant samples: original label in {0, 1}'
+            '1': 'significant_sdc: original label == 2, i.e. pred_answer != clean_answer
+              and significance == 2'
+          feature_count: 72
+          feature_columns:
+          - cos_sim_mean_p6_7
+          - cos_sim_max_p6_7
+          - cos_sim_min_p6_7
+          - mean_diff_mean_p6_7
+          - mean_diff_max_p6_7
+          - mean_diff_min_p6_7
+          - std_diff_mean_p6_7
+          - std_diff_max_p6_7
+          - std_diff_min_p6_7
+          - cos_sim_mean_p22_23
+          - cos_sim_max_p22_23
+          - cos_sim_min_p22_23
+          - mean_diff_mean_p22_23
+          - mean_diff_max_p22_23
+          - mean_diff_min_p22_23
+          - std_diff_mean_p22_23
+          - std_diff_max_p22_23
+          - std_diff_min_p22_23
+          - cos_sim_mean_p23_24
+          - cos_sim_max_p23_24
+          - cos_sim_min_p23_24
+          - mean_diff_mean_p23_24
+          - mean_diff_max_p23_24
+          - mean_diff_min_p23_24
+          - std_diff_mean_p23_24
+          - std_diff_max_p23_24
+          - std_diff_min_p23_24
+          - cos_sim_mean_p24_25
+          - cos_sim_max_p24_25
+          - cos_sim_min_p24_25
+          - mean_diff_mean_p24_25
+          - mean_diff_max_p24_25
+          - mean_diff_min_p24_25
+          - std_diff_mean_p24_25
+          - std_diff_max_p24_25
+          - std_diff_min_p24_25
+          - cos_sim_mean_p25_26
+          - cos_sim_max_p25_26
+          - cos_sim_min_p25_26
+          - mean_diff_mean_p25_26
+          - mean_diff_max_p25_26
+          - mean_diff_min_p25_26
+          - std_diff_mean_p25_26
+          - std_diff_max_p25_26
+          - std_diff_min_p25_26
+          - cos_sim_mean_p26_27
+          - cos_sim_max_p26_27
+          - cos_sim_min_p26_27
+          - mean_diff_mean_p26_27
+          - mean_diff_max_p26_27
+          - mean_diff_min_p26_27
+          - std_diff_mean_p26_27
+          - std_diff_max_p26_27
+          - std_diff_min_p26_27
+          - l2_distance_mean_p6_7
+          - l2_distance_max_p6_7
+          - l2_distance_min_p6_7
+          - l2_distance_mean_p22_23
+          - l2_distance_max_p22_23
+          - l2_distance_min_p22_23
+          - l2_distance_mean_p23_24
+          - l2_distance_max_p23_24
+          - l2_distance_min_p23_24
+          - l2_distance_mean_p24_25
+          - l2_distance_max_p24_25
+          - l2_distance_min_p24_25
+          - l2_distance_mean_p25_26
+          - l2_distance_max_p25_26
+          - l2_distance_min_p25_26
+          - l2_distance_mean_p26_27
+          - l2_distance_max_p26_27
+          - l2_distance_min_p26_27
+          all_feature_nan_filter_stats:
+            training_policy: keep_all_feature_nan
+            drop_all_feature_nan_for_training: false
+            train_all_feature_nan: 301
+            valid_all_feature_nan: 63
+            train_all_feature_nan_label_significance_counts:
+              label=2, significance=2: 301
+            valid_all_feature_nan_label_significance_counts:
+              label=2, significance=2: 63
+          train_full_label_significance_counts:
+            label=0, significance=0: 7461
+            label=1, significance=0: 5119
+            label=1, significance=1: 177
+            label=2, significance=2: 1171
+          valid_full_label_significance_counts:
+            label=0, significance=0: 1313
+            label=1, significance=0: 875
+            label=1, significance=1: 22
+            label=2, significance=2: 206
+          train_rows_used: 13928
+          test_rows: 2122
+          valid_full_rows: 2416
+          valid_non_all_nan_rows: 2353
+          train_info:
+            train_distribution:
+              total: 11806
+              counts:
+                '0': 10763
+                '1': 1043
+              rates:
+                '0': 0.9116550906318821
+                '1': 0.08834490936811791
+            test_distribution:
+              total: 2122
+              counts:
+                '0': 1994
+                '1': 128
+              rates:
+                '0': 0.939679547596607
+                '1': 0.060320452403393024
+            class_weights:
+              '0': 0.5484530335408343
+              '1': 5.659635666347076
+            best_iteration: 13
+            best_score: 0.00471253534401508
+          test_metrics:
+            confusion_matrix:
+            - - 1992
+              - 2
+            - - 8
+              - 120
+            accuracy: 0.9952874646559849
+            macro_precision: 0.9898032786885246
+            macro_recall: 0.9682484954864594
+            macro_f1: 0.9787481221832749
+            weighted_precision: 0.995252421934148
+            weighted_recall: 0.9952874646559849
+            weighted_f1: 0.9952344539429313
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 1994
+                pred_total: 2000
+                tp: 1992
+                fp: 8
+                fn: 2
+                tn: 120
+                precision: 0.996
+                recall: 0.9989969909729187
+                f1: 0.9974962443665498
+                prob_mean: 0.5854754447937012
+              '1':
+                name: significant_sdc
+                support: 128
+                pred_total: 122
+                tp: 120
+                fp: 2
+                fn: 8
+                tn: 1992
+                precision: 0.9836065573770492
+                recall: 0.9375
+                f1: 0.96
+                prob_mean: 0.41452452540397644
+            classification_report:
+              non_significant_sdc:
+                precision: 0.996
+                recall: 0.9989969909729187
+                f1-score: 0.9974962443665498
+                support: 1994.0
+              significant_sdc:
+                precision: 0.9836065573770492
+                recall: 0.9375
+                f1-score: 0.96
+                support: 128.0
+              accuracy: 0.9952874646559849
+              macro avg:
+                precision: 0.9898032786885246
+                recall: 0.9682484954864594
+                f1-score: 0.9787481221832749
+                support: 2122.0
+              weighted avg:
+                precision: 0.995252421934148
+                recall: 0.9952874646559849
+                f1-score: 0.9952344539429313
+                support: 2122.0
+            target_class_1:
+              name: significant_sdc
+              support: 128
+              pred_total: 122
+              tp: 120
+              fp: 2
+              fn: 8
+              tn: 1992
+              precision: 0.9836065573770492
+              recall: 0.9375
+              f1: 0.96
+              prob_mean: 0.41452452540397644
+            target_significant_sdc:
+              name: significant_sdc
+              support: 128
+              pred_total: 122
+              tp: 120
+              fp: 2
+              fn: 8
+              tn: 1992
+              precision: 0.9836065573770492
+              recall: 0.9375
+              f1: 0.96
+              prob_mean: 0.41452452540397644
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/output/train_with_nan/significant_sdc_binary_test_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/output/train_with_nan/significant_sdc_binary_test_wrong_predictions.csv
+              wrong_count: 10
+            label_significance_counts:
+              label=0, significance=0: 1122
+              label=1, significance=0: 834
+              label=1, significance=1: 38
+              label=2, significance=2: 128
+          valid_full_metrics:
+            confusion_matrix:
+            - - 2208
+              - 2
+            - - 27
+              - 179
+            accuracy: 0.9879966887417219
+            macro_precision: 0.9884348696651711
+            macro_recall: 0.9340135307296928
+            macro_f1: 0.9592702075031319
+            weighted_precision: 0.9880073552685826
+            weighted_recall: 0.9879966887417219
+            weighted_f1: 0.9876427399832375
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 2210
+                pred_total: 2235
+                tp: 2208
+                fp: 27
+                fn: 2
+                tn: 179
+                precision: 0.9879194630872483
+                recall: 0.9990950226244344
+                f1: 0.9934758155230596
+                prob_mean: 0.5824720859527588
+              '1':
+                name: significant_sdc
+                support: 206
+                pred_total: 181
+                tp: 179
+                fp: 2
+                fn: 27
+                tn: 2208
+                precision: 0.988950276243094
+                recall: 0.8689320388349514
+                f1: 0.9250645994832042
+                prob_mean: 0.4175279140472412
+            classification_report:
+              non_significant_sdc:
+                precision: 0.9879194630872483
+                recall: 0.9990950226244344
+                f1-score: 0.9934758155230596
+                support: 2210.0
+              significant_sdc:
+                precision: 0.988950276243094
+                recall: 0.8689320388349514
+                f1-score: 0.9250645994832042
+                support: 206.0
+              accuracy: 0.9879966887417219
+              macro avg:
+                precision: 0.9884348696651711
+                recall: 0.9340135307296928
+                f1-score: 0.9592702075031319
+                support: 2416.0
+              weighted avg:
+                precision: 0.9880073552685826
+                recall: 0.9879966887417219
+                f1-score: 0.9876427399832375
+                support: 2416.0
+            target_class_1:
+              name: significant_sdc
+              support: 206
+              pred_total: 181
+              tp: 179
+              fp: 2
+              fn: 27
+              tn: 2208
+              precision: 0.988950276243094
+              recall: 0.8689320388349514
+              f1: 0.9250645994832042
+              prob_mean: 0.4175279140472412
+            target_significant_sdc:
+              name: significant_sdc
+              support: 206
+              pred_total: 181
+              tp: 179
+              fp: 2
+              fn: 27
+              tn: 2208
+              precision: 0.988950276243094
+              recall: 0.8689320388349514
+              f1: 0.9250645994832042
+              prob_mean: 0.4175279140472412
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/output/train_with_nan/significant_sdc_binary_valid_full_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/output/train_with_nan/significant_sdc_binary_valid_full_wrong_predictions.csv
+              wrong_count: 29
+            label_significance_counts:
+              label=0, significance=0: 1313
+              label=1, significance=0: 875
+              label=1, significance=1: 22
+              label=2, significance=2: 206
+          valid_non_all_nan_metrics:
+            confusion_matrix:
+            - - 2208
+              - 2
+            - - 27
+              - 116
+            accuracy: 0.9876753081172971
+            macro_precision: 0.9854851552724377
+            macro_recall: 0.9051419169066228
+            macro_f1: 0.9411823522059742
+            weighted_precision: 0.987623580369426
+            weighted_recall: 0.9876753081172971
+            weighted_f1: 0.9871197039596571
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 2210
+                pred_total: 2235
+                tp: 2208
+                fp: 27
+                fn: 2
+                tn: 116
+                precision: 0.9879194630872483
+                recall: 0.9990950226244344
+                f1: 0.9934758155230596
+                prob_mean: 0.5879672765731812
+              '1':
+                name: significant_sdc
+                support: 143
+                pred_total: 118
+                tp: 116
+                fp: 2
+                fn: 27
+                tn: 2208
+                precision: 0.9830508474576272
+                recall: 0.8111888111888111
+                f1: 0.8888888888888888
+                prob_mean: 0.41203269362449646
+            classification_report:
+              non_significant_sdc:
+                precision: 0.9879194630872483
+                recall: 0.9990950226244344
+                f1-score: 0.9934758155230596
+                support: 2210.0
+              significant_sdc:
+                precision: 0.9830508474576272
+                recall: 0.8111888111888111
+                f1-score: 0.8888888888888888
+                support: 143.0
+              accuracy: 0.9876753081172971
+              macro avg:
+                precision: 0.9854851552724377
+                recall: 0.9051419169066228
+                f1-score: 0.9411823522059742
+                support: 2353.0
+              weighted avg:
+                precision: 0.987623580369426
+                recall: 0.9876753081172971
+                f1-score: 0.9871197039596571
+                support: 2353.0
+            target_class_1:
+              name: significant_sdc
+              support: 143
+              pred_total: 118
+              tp: 116
+              fp: 2
+              fn: 27
+              tn: 2208
+              precision: 0.9830508474576272
+              recall: 0.8111888111888111
+              f1: 0.8888888888888888
+              prob_mean: 0.41203269362449646
+            target_significant_sdc:
+              name: significant_sdc
+              support: 143
+              pred_total: 118
+              tp: 116
+              fp: 2
+              fn: 27
+              tn: 2208
+              precision: 0.9830508474576272
+              recall: 0.8111888111888111
+              f1: 0.8888888888888888
+              prob_mean: 0.41203269362449646
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/output/train_with_nan/significant_sdc_binary_valid_non_all_nan_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/output/train_with_nan/significant_sdc_binary_valid_non_all_nan_wrong_predictions.csv
+              wrong_count: 29
+            label_significance_counts:
+              label=0, significance=0: 1313
+              label=1, significance=0: 875
+              label=1, significance=1: 22
+              label=2, significance=2: 143
+          feature_importance_top20:
+          - feature: l2_distance_mean_p26_27
+            importance: 0.2578768730163574
+          - feature: l2_distance_max_p26_27
+            importance: 0.14206379652023315
+          - feature: l2_distance_min_p26_27
+            importance: 0.06571485847234726
+          - feature: cos_sim_max_p23_24
+            importance: 0.05762885883450508
+          - feature: cos_sim_mean_p26_27
+            importance: 0.018519015982747078
+          - feature: l2_distance_max_p6_7
+            importance: 0.015518313273787498
+          - feature: l2_distance_min_p25_26
+            importance: 0.013027703389525414
+          - feature: cos_sim_max_p26_27
+            importance: 0.012127009220421314
+          - feature: std_diff_max_p22_23
+            importance: 0.010733149014413357
+          - feature: l2_distance_max_p24_25
+            importance: 0.010438632220029831
+          - feature: mean_diff_mean_p24_25
+            importance: 0.009773315861821175
+          - feature: std_diff_mean_p23_24
+            importance: 0.009262832812964916
+          - feature: cos_sim_mean_p24_25
+            importance: 0.009081518277525902
+          - feature: std_diff_mean_p24_25
+            importance: 0.009041686542332172
+          - feature: l2_distance_mean_p22_23
+            importance: 0.008676551282405853
+          - feature: mean_diff_mean_p6_7
+            importance: 0.008463737554848194
+          - feature: l2_distance_min_p6_7
+            importance: 0.008420992642641068
+          - feature: mean_diff_max_p23_24
+            importance: 0.008268304169178009
+          - feature: mean_diff_mean_p22_23
+            importance: 0.00814652070403099
+          - feature: std_diff_max_p6_7
+            importance: 0.008115889504551888
+- name: llava15_earthvqa
+  model: llava15
+  dataset: earthvqa
+  files:
+    labeled_jsonl:
+      role: labeled_jsonl
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/json/detect_EarthVQA_llava_with_sem_project_labeled.jsonl
+      exists: true
+      size_bytes: 946801921
+      mtime_ns: 1784819729631678414
+      sha256: ff3c8f905ed01b931cbcaf0fc91541da7ac9c6f71fd86d5dfada541dd8a6754d
+      rows: 11228
+    train_csv:
+      role: train_csv
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_train_set.csv
+      exists: true
+      size_bytes: 13172793
+      mtime_ns: 1785164187570306121
+      sha256: 0a9976fcd86bb36c22ec7236b6d3c1481c621d78dc70847be1f3da590aa22355
+      data_summary:
+        rows: 9524
+        columns:
+        - orig_id
+        - sample_uid
+        - total_steps
+        - last_k_steps
+        - num_steps_used
+        - cos_sim_mean_p6_7
+        - cos_sim_max_p6_7
+        - cos_sim_min_p6_7
+        - mean_diff_mean_p6_7
+        - mean_diff_max_p6_7
+        - mean_diff_min_p6_7
+        - std_diff_mean_p6_7
+        - std_diff_max_p6_7
+        - std_diff_min_p6_7
+        - cos_sim_mean_p22_23
+        - cos_sim_max_p22_23
+        - cos_sim_min_p22_23
+        - mean_diff_mean_p22_23
+        - mean_diff_max_p22_23
+        - mean_diff_min_p22_23
+        - std_diff_mean_p22_23
+        - std_diff_max_p22_23
+        - std_diff_min_p22_23
+        - cos_sim_mean_p23_24
+        - cos_sim_max_p23_24
+        - cos_sim_min_p23_24
+        - mean_diff_mean_p23_24
+        - mean_diff_max_p23_24
+        - mean_diff_min_p23_24
+        - std_diff_mean_p23_24
+        - std_diff_max_p23_24
+        - std_diff_min_p23_24
+        - cos_sim_mean_p24_25
+        - cos_sim_max_p24_25
+        - cos_sim_min_p24_25
+        - mean_diff_mean_p24_25
+        - mean_diff_max_p24_25
+        - mean_diff_min_p24_25
+        - std_diff_mean_p24_25
+        - std_diff_max_p24_25
+        - std_diff_min_p24_25
+        - cos_sim_mean_p25_26
+        - cos_sim_max_p25_26
+        - cos_sim_min_p25_26
+        - mean_diff_mean_p25_26
+        - mean_diff_max_p25_26
+        - mean_diff_min_p25_26
+        - std_diff_mean_p25_26
+        - std_diff_max_p25_26
+        - std_diff_min_p25_26
+        - cos_sim_mean_p26_27
+        - cos_sim_max_p26_27
+        - cos_sim_min_p26_27
+        - mean_diff_mean_p26_27
+        - mean_diff_max_p26_27
+        - mean_diff_min_p26_27
+        - std_diff_mean_p26_27
+        - std_diff_max_p26_27
+        - std_diff_min_p26_27
+        - l2_distance_mean_p6_7
+        - l2_distance_max_p6_7
+        - l2_distance_min_p6_7
+        - l2_distance_mean_p22_23
+        - l2_distance_max_p22_23
+        - l2_distance_min_p22_23
+        - l2_distance_mean_p23_24
+        - l2_distance_max_p23_24
+        - l2_distance_min_p23_24
+        - l2_distance_mean_p24_25
+        - l2_distance_max_p24_25
+        - l2_distance_min_p24_25
+        - l2_distance_mean_p25_26
+        - l2_distance_max_p25_26
+        - l2_distance_min_p25_26
+        - l2_distance_mean_p26_27
+        - l2_distance_max_p26_27
+        - l2_distance_min_p26_27
+        - significance
+        - label
+        column_count: 79
+        unique_orig_ids: 4250
+        unique_sample_uids: 9524
+        label_counts:
+          '0': 8366
+          '1': 1158
+        significance_counts:
+          '0': 8669
+          '1': 54
+          '2': 801
+        significant_sdc_target_counts:
+          '0': 8723
+          '1': 801
+    valid_csv:
+      role: valid_csv
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_valid_set.csv
+      exists: true
+      size_bytes: 2339489
+      mtime_ns: 1785164187722311968
+      sha256: aa090a6a1793d4c72e8fc257d3e5185e3658dbeae6c65b880763bb81e044453a
+      data_summary:
+        rows: 1699
+        columns:
+        - orig_id
+        - sample_uid
+        - total_steps
+        - last_k_steps
+        - num_steps_used
+        - cos_sim_mean_p6_7
+        - cos_sim_max_p6_7
+        - cos_sim_min_p6_7
+        - mean_diff_mean_p6_7
+        - mean_diff_max_p6_7
+        - mean_diff_min_p6_7
+        - std_diff_mean_p6_7
+        - std_diff_max_p6_7
+        - std_diff_min_p6_7
+        - cos_sim_mean_p22_23
+        - cos_sim_max_p22_23
+        - cos_sim_min_p22_23
+        - mean_diff_mean_p22_23
+        - mean_diff_max_p22_23
+        - mean_diff_min_p22_23
+        - std_diff_mean_p22_23
+        - std_diff_max_p22_23
+        - std_diff_min_p22_23
+        - cos_sim_mean_p23_24
+        - cos_sim_max_p23_24
+        - cos_sim_min_p23_24
+        - mean_diff_mean_p23_24
+        - mean_diff_max_p23_24
+        - mean_diff_min_p23_24
+        - std_diff_mean_p23_24
+        - std_diff_max_p23_24
+        - std_diff_min_p23_24
+        - cos_sim_mean_p24_25
+        - cos_sim_max_p24_25
+        - cos_sim_min_p24_25
+        - mean_diff_mean_p24_25
+        - mean_diff_max_p24_25
+        - mean_diff_min_p24_25
+        - std_diff_mean_p24_25
+        - std_diff_max_p24_25
+        - std_diff_min_p24_25
+        - cos_sim_mean_p25_26
+        - cos_sim_max_p25_26
+        - cos_sim_min_p25_26
+        - mean_diff_mean_p25_26
+        - mean_diff_max_p25_26
+        - mean_diff_min_p25_26
+        - std_diff_mean_p25_26
+        - std_diff_max_p25_26
+        - std_diff_min_p25_26
+        - cos_sim_mean_p26_27
+        - cos_sim_max_p26_27
+        - cos_sim_min_p26_27
+        - mean_diff_mean_p26_27
+        - mean_diff_max_p26_27
+        - mean_diff_min_p26_27
+        - std_diff_mean_p26_27
+        - std_diff_max_p26_27
+        - std_diff_min_p26_27
+        - l2_distance_mean_p6_7
+        - l2_distance_max_p6_7
+        - l2_distance_min_p6_7
+        - l2_distance_mean_p22_23
+        - l2_distance_max_p22_23
+        - l2_distance_min_p22_23
+        - l2_distance_mean_p23_24
+        - l2_distance_max_p23_24
+        - l2_distance_min_p23_24
+        - l2_distance_mean_p24_25
+        - l2_distance_max_p24_25
+        - l2_distance_min_p24_25
+        - l2_distance_mean_p25_26
+        - l2_distance_max_p25_26
+        - l2_distance_min_p25_26
+        - l2_distance_mean_p26_27
+        - l2_distance_max_p26_27
+        - l2_distance_min_p26_27
+        - significance
+        - label
+        column_count: 79
+        unique_orig_ids: 750
+        unique_sample_uids: 1699
+        label_counts:
+          '0': 1477
+          '1': 222
+        significance_counts:
+          '0': 1538
+          '1': 5
+          '2': 156
+        significant_sdc_target_counts:
+          '0': 1543
+          '1': 156
+    metrics:
+      role: metrics
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/output/metrics_summary.json
+      exists: true
+      size_bytes: 16982
+      mtime_ns: 1785164273976629790
+      sha256: f7f5ff2f71d1241ddb848629f62f1ba0db8d1730d30f522d897dae6fc116b3e7
+      snapshot:
+        train_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_train_set.csv
+        valid_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_valid_set.csv
+        group_col: orig_id
+        training_nan_policy: keep_all_feature_nan
+        evaluation_splits:
+        - valid_full_metrics
+        - valid_non_all_nan_metrics
+        model_summary:
+          train_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_train_set.csv
+          valid_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_valid_set.csv
+          group_col: orig_id
+          output_subdir: train_with_nan
+          task_type: binary_significant_sdc
+          class_names:
+            '0': non_significant_sdc
+            '1': significant_sdc
+          target_definition:
+            '0': 'non-significant samples: original label == 0 or non-significant
+              original label == 1'
+            '1': 'significant_sdc: original label == 2, or original label == 1 and
+              significance == 2'
+          feature_count: 72
+          feature_columns:
+          - cos_sim_mean_p6_7
+          - cos_sim_max_p6_7
+          - cos_sim_min_p6_7
+          - mean_diff_mean_p6_7
+          - mean_diff_max_p6_7
+          - mean_diff_min_p6_7
+          - std_diff_mean_p6_7
+          - std_diff_max_p6_7
+          - std_diff_min_p6_7
+          - cos_sim_mean_p22_23
+          - cos_sim_max_p22_23
+          - cos_sim_min_p22_23
+          - mean_diff_mean_p22_23
+          - mean_diff_max_p22_23
+          - mean_diff_min_p22_23
+          - std_diff_mean_p22_23
+          - std_diff_max_p22_23
+          - std_diff_min_p22_23
+          - cos_sim_mean_p23_24
+          - cos_sim_max_p23_24
+          - cos_sim_min_p23_24
+          - mean_diff_mean_p23_24
+          - mean_diff_max_p23_24
+          - mean_diff_min_p23_24
+          - std_diff_mean_p23_24
+          - std_diff_max_p23_24
+          - std_diff_min_p23_24
+          - cos_sim_mean_p24_25
+          - cos_sim_max_p24_25
+          - cos_sim_min_p24_25
+          - mean_diff_mean_p24_25
+          - mean_diff_max_p24_25
+          - mean_diff_min_p24_25
+          - std_diff_mean_p24_25
+          - std_diff_max_p24_25
+          - std_diff_min_p24_25
+          - cos_sim_mean_p25_26
+          - cos_sim_max_p25_26
+          - cos_sim_min_p25_26
+          - mean_diff_mean_p25_26
+          - mean_diff_max_p25_26
+          - mean_diff_min_p25_26
+          - std_diff_mean_p25_26
+          - std_diff_max_p25_26
+          - std_diff_min_p25_26
+          - cos_sim_mean_p26_27
+          - cos_sim_max_p26_27
+          - cos_sim_min_p26_27
+          - mean_diff_mean_p26_27
+          - mean_diff_max_p26_27
+          - mean_diff_min_p26_27
+          - std_diff_mean_p26_27
+          - std_diff_max_p26_27
+          - std_diff_min_p26_27
+          - l2_distance_mean_p6_7
+          - l2_distance_max_p6_7
+          - l2_distance_min_p6_7
+          - l2_distance_mean_p22_23
+          - l2_distance_max_p22_23
+          - l2_distance_min_p22_23
+          - l2_distance_mean_p23_24
+          - l2_distance_max_p23_24
+          - l2_distance_min_p23_24
+          - l2_distance_mean_p24_25
+          - l2_distance_max_p24_25
+          - l2_distance_min_p24_25
+          - l2_distance_mean_p25_26
+          - l2_distance_max_p25_26
+          - l2_distance_min_p25_26
+          - l2_distance_mean_p26_27
+          - l2_distance_max_p26_27
+          - l2_distance_min_p26_27
+          all_feature_nan_filter_stats:
+            training_policy: keep_all_feature_nan
+            drop_all_feature_nan_for_training: false
+            train_all_feature_nan: 535
+            valid_all_feature_nan: 100
+            train_all_feature_nan_label_significance_counts:
+              label=1, significance=2: 535
+            valid_all_feature_nan_label_significance_counts:
+              label=1, significance=2: 100
+          train_full_label_significance_counts:
+            label=0, significance=0: 8366
+            label=1, significance=0: 303
+            label=1, significance=1: 54
+            label=1, significance=2: 801
+          valid_full_label_significance_counts:
+            label=0, significance=0: 1477
+            label=1, significance=0: 61
+            label=1, significance=1: 5
+            label=1, significance=2: 156
+          train_rows_used: 9524
+          test_rows: 1413
+          valid_full_rows: 1699
+          valid_non_all_nan_rows: 1599
+          train_info:
+            train_distribution:
+              total: 8111
+              counts:
+                '0': 7418
+                '1': 693
+              rates:
+                '0': 0.9145604734311429
+                '1': 0.0854395265688571
+            test_distribution:
+              total: 1413
+              counts:
+                '0': 1305
+                '1': 108
+              rates:
+                '0': 0.9235668789808917
+                '1': 0.07643312101910828
+            class_weights:
+              '0': 0.546710703693718
+              '1': 5.8520923520923525
+            best_iteration: 329
+            best_score: 0.0056617126680821
+          test_metrics:
+            confusion_matrix:
+            - - 1303
+              - 2
+            - - 6
+              - 102
+            accuracy: 0.9943382873319179
+            macro_precision: 0.9880927895633778
+            macro_recall: 0.971455938697318
+            macro_f1: 0.9796018535895252
+            weighted_precision: 0.9942968234463176
+            weighted_recall: 0.9943382873319179
+            weighted_f1: 0.9942892067865645
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 1305
+                pred_total: 1309
+                tp: 1303
+                fp: 6
+                fn: 2
+                tn: 102
+                precision: 0.9954163483575248
+                recall: 0.9984674329501916
+                f1: 0.9969395562356542
+                prob_mean: 0.8974179029464722
+              '1':
+                name: significant_sdc
+                support: 108
+                pred_total: 104
+                tp: 102
+                fp: 2
+                fn: 6
+                tn: 1303
+                precision: 0.9807692307692307
+                recall: 0.9444444444444444
+                f1: 0.9622641509433962
+                prob_mean: 0.10258210450410843
+            classification_report:
+              non_significant_sdc:
+                precision: 0.9954163483575248
+                recall: 0.9984674329501916
+                f1-score: 0.9969395562356542
+                support: 1305.0
+              significant_sdc:
+                precision: 0.9807692307692307
+                recall: 0.9444444444444444
+                f1-score: 0.9622641509433962
+                support: 108.0
+              accuracy: 0.9943382873319179
+              macro avg:
+                precision: 0.9880927895633778
+                recall: 0.971455938697318
+                f1-score: 0.9796018535895252
+                support: 1413.0
+              weighted avg:
+                precision: 0.9942968234463176
+                recall: 0.9943382873319179
+                f1-score: 0.9942892067865645
+                support: 1413.0
+            target_class_1:
+              name: significant_sdc
+              support: 108
+              pred_total: 104
+              tp: 102
+              fp: 2
+              fn: 6
+              tn: 1303
+              precision: 0.9807692307692307
+              recall: 0.9444444444444444
+              f1: 0.9622641509433962
+              prob_mean: 0.10258210450410843
+            target_significant_sdc:
+              name: significant_sdc
+              support: 108
+              pred_total: 104
+              tp: 102
+              fp: 2
+              fn: 6
+              tn: 1303
+              precision: 0.9807692307692307
+              recall: 0.9444444444444444
+              f1: 0.9622641509433962
+              prob_mean: 0.10258210450410843
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/output/train_with_nan/significant_sdc_binary_test_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/output/train_with_nan/significant_sdc_binary_test_wrong_predictions.csv
+              wrong_count: 8
+            label_significance_counts:
+              label=0, significance=0: 1254
+              label=1, significance=0: 48
+              label=1, significance=1: 3
+              label=1, significance=2: 108
+          valid_full_metrics:
+            confusion_matrix:
+            - - 1541
+              - 2
+            - - 7
+              - 149
+            accuracy: 0.9947027663331371
+            macro_precision: 0.9911165015315639
+            macro_recall: 0.9769160144241156
+            macro_f1: 0.9838861800098426
+            weighted_precision: 0.994677095146297
+            weighted_recall: 0.9947027663331371
+            weighted_f1: 0.9946639136523782
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 1543
+                pred_total: 1548
+                tp: 1541
+                fp: 7
+                fn: 2
+                tn: 149
+                precision: 0.9954780361757106
+                recall: 0.998703823720026
+                f1: 0.9970883209317373
+                prob_mean: 0.8847072720527649
+              '1':
+                name: significant_sdc
+                support: 156
+                pred_total: 151
+                tp: 149
+                fp: 2
+                fn: 7
+                tn: 1541
+                precision: 0.9867549668874173
+                recall: 0.9551282051282052
+                f1: 0.9706840390879479
+                prob_mean: 0.11529278010129929
+            classification_report:
+              non_significant_sdc:
+                precision: 0.9954780361757106
+                recall: 0.998703823720026
+                f1-score: 0.9970883209317373
+                support: 1543.0
+              significant_sdc:
+                precision: 0.9867549668874173
+                recall: 0.9551282051282052
+                f1-score: 0.9706840390879479
+                support: 156.0
+              accuracy: 0.9947027663331371
+              macro avg:
+                precision: 0.9911165015315639
+                recall: 0.9769160144241156
+                f1-score: 0.9838861800098426
+                support: 1699.0
+              weighted avg:
+                precision: 0.994677095146297
+                recall: 0.9947027663331371
+                f1-score: 0.9946639136523782
+                support: 1699.0
+            target_class_1:
+              name: significant_sdc
+              support: 156
+              pred_total: 151
+              tp: 149
+              fp: 2
+              fn: 7
+              tn: 1541
+              precision: 0.9867549668874173
+              recall: 0.9551282051282052
+              f1: 0.9706840390879479
+              prob_mean: 0.11529278010129929
+            target_significant_sdc:
+              name: significant_sdc
+              support: 156
+              pred_total: 151
+              tp: 149
+              fp: 2
+              fn: 7
+              tn: 1541
+              precision: 0.9867549668874173
+              recall: 0.9551282051282052
+              f1: 0.9706840390879479
+              prob_mean: 0.11529278010129929
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/output/train_with_nan/significant_sdc_binary_valid_full_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/output/train_with_nan/significant_sdc_binary_valid_full_wrong_predictions.csv
+              wrong_count: 9
+            label_significance_counts:
+              label=0, significance=0: 1477
+              label=1, significance=0: 61
+              label=1, significance=1: 5
+              label=1, significance=2: 156
+          valid_non_all_nan_metrics:
+            confusion_matrix:
+            - - 1541
+              - 2
+            - - 7
+              - 49
+            accuracy: 0.9943714821763602
+            macro_precision: 0.9781311749506004
+            macro_recall: 0.9368519118600129
+            macro_f1: 0.9564880856995135
+            weighted_precision: 0.9942629964901494
+            weighted_recall: 0.9943714821763602
+            weighted_f1: 0.9942445270943332
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 1543
+                pred_total: 1548
+                tp: 1541
+                fp: 7
+                fn: 2
+                tn: 49
+                precision: 0.9954780361757106
+                recall: 0.998703823720026
+                f1: 0.9970883209317373
+                prob_mean: 0.9388737082481384
+              '1':
+                name: significant_sdc
+                support: 56
+                pred_total: 51
+                tp: 49
+                fp: 2
+                fn: 7
+                tn: 1541
+                precision: 0.9607843137254902
+                recall: 0.875
+                f1: 0.9158878504672897
+                prob_mean: 0.06112629920244217
+            classification_report:
+              non_significant_sdc:
+                precision: 0.9954780361757106
+                recall: 0.998703823720026
+                f1-score: 0.9970883209317373
+                support: 1543.0
+              significant_sdc:
+                precision: 0.9607843137254902
+                recall: 0.875
+                f1-score: 0.9158878504672897
+                support: 56.0
+              accuracy: 0.9943714821763602
+              macro avg:
+                precision: 0.9781311749506004
+                recall: 0.9368519118600129
+                f1-score: 0.9564880856995135
+                support: 1599.0
+              weighted avg:
+                precision: 0.9942629964901494
+                recall: 0.9943714821763602
+                f1-score: 0.9942445270943332
+                support: 1599.0
+            target_class_1:
+              name: significant_sdc
+              support: 56
+              pred_total: 51
+              tp: 49
+              fp: 2
+              fn: 7
+              tn: 1541
+              precision: 0.9607843137254902
+              recall: 0.875
+              f1: 0.9158878504672897
+              prob_mean: 0.06112629920244217
+            target_significant_sdc:
+              name: significant_sdc
+              support: 56
+              pred_total: 51
+              tp: 49
+              fp: 2
+              fn: 7
+              tn: 1541
+              precision: 0.9607843137254902
+              recall: 0.875
+              f1: 0.9158878504672897
+              prob_mean: 0.06112629920244217
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/output/train_with_nan/significant_sdc_binary_valid_non_all_nan_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/output/train_with_nan/significant_sdc_binary_valid_non_all_nan_wrong_predictions.csv
+              wrong_count: 9
+            label_significance_counts:
+              label=0, significance=0: 1477
+              label=1, significance=0: 61
+              label=1, significance=1: 5
+              label=1, significance=2: 56
+          feature_importance_top20:
+          - feature: cos_sim_mean_p24_25
+            importance: 0.4221929609775543
+          - feature: l2_distance_mean_p25_26
+            importance: 0.2784563899040222
+          - feature: cos_sim_mean_p26_27
+            importance: 0.1104351207613945
+          - feature: l2_distance_mean_p24_25
+            importance: 0.013910691253840923
+          - feature: cos_sim_max_p24_25
+            importance: 0.010064111091196537
+          - feature: cos_sim_mean_p23_24
+            importance: 0.0077911061234772205
+          - feature: cos_sim_max_p6_7
+            importance: 0.007115636952221394
+          - feature: l2_distance_mean_p6_7
+            importance: 0.005403759889304638
+          - feature: l2_distance_min_p26_27
+            importance: 0.004592744167894125
+          - feature: cos_sim_max_p23_24
+            importance: 0.004487898200750351
+          - feature: cos_sim_mean_p6_7
+            importance: 0.0044084955006837845
+          - feature: std_diff_min_p23_24
+            importance: 0.004069164860993624
+          - feature: cos_sim_max_p26_27
+            importance: 0.0040588355623185635
+          - feature: l2_distance_min_p24_25
+            importance: 0.004022213164716959
+          - feature: l2_distance_max_p25_26
+            importance: 0.0034887446090579033
+          - feature: std_diff_mean_p22_23
+            importance: 0.003447971772402525
+          - feature: std_diff_max_p25_26
+            importance: 0.003414876526221633
+          - feature: mean_diff_min_p22_23
+            importance: 0.0032953103072941303
+          - feature: cos_sim_min_p6_7
+            importance: 0.003171788528561592
+          - feature: std_diff_min_p22_23
+            importance: 0.0031679533421993256
+- name: llava15_lingoqa
+  model: llava15
+  dataset: lingoqa
+  files:
+    labeled_jsonl:
+      role: labeled_jsonl
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/json/detect_LingoQA_llava_with_sem_labeled2.jsonl
+      exists: true
+      size_bytes: 1822547523
+      mtime_ns: 1781679647754879755
+      sha256: c3a58880129afc0ee6eb50dd0289d189599a87f06f154fec00c820723ee6fba7
+      rows: 16159
+    train_csv:
+      role: train_csv
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_train_set.csv
+      exists: true
+      size_bytes: 19391127
+      mtime_ns: 1782915821576777651
+      sha256: 821d08d998467c1ed4f97463ac3b8bbeda75cb18088bc2be237ded3a9d8b55c6
+      data_summary:
+        rows: 13739
+        columns:
+        - orig_id
+        - sample_uid
+        - total_steps
+        - last_k_steps
+        - num_steps_used
+        - cos_sim_mean_p6_7
+        - cos_sim_max_p6_7
+        - cos_sim_min_p6_7
+        - mean_diff_mean_p6_7
+        - mean_diff_max_p6_7
+        - mean_diff_min_p6_7
+        - std_diff_mean_p6_7
+        - std_diff_max_p6_7
+        - std_diff_min_p6_7
+        - cos_sim_mean_p22_23
+        - cos_sim_max_p22_23
+        - cos_sim_min_p22_23
+        - mean_diff_mean_p22_23
+        - mean_diff_max_p22_23
+        - mean_diff_min_p22_23
+        - std_diff_mean_p22_23
+        - std_diff_max_p22_23
+        - std_diff_min_p22_23
+        - cos_sim_mean_p23_24
+        - cos_sim_max_p23_24
+        - cos_sim_min_p23_24
+        - mean_diff_mean_p23_24
+        - mean_diff_max_p23_24
+        - mean_diff_min_p23_24
+        - std_diff_mean_p23_24
+        - std_diff_max_p23_24
+        - std_diff_min_p23_24
+        - cos_sim_mean_p24_25
+        - cos_sim_max_p24_25
+        - cos_sim_min_p24_25
+        - mean_diff_mean_p24_25
+        - mean_diff_max_p24_25
+        - mean_diff_min_p24_25
+        - std_diff_mean_p24_25
+        - std_diff_max_p24_25
+        - std_diff_min_p24_25
+        - cos_sim_mean_p25_26
+        - cos_sim_max_p25_26
+        - cos_sim_min_p25_26
+        - mean_diff_mean_p25_26
+        - mean_diff_max_p25_26
+        - mean_diff_min_p25_26
+        - std_diff_mean_p25_26
+        - std_diff_max_p25_26
+        - std_diff_min_p25_26
+        - cos_sim_mean_p26_27
+        - cos_sim_max_p26_27
+        - cos_sim_min_p26_27
+        - mean_diff_mean_p26_27
+        - mean_diff_max_p26_27
+        - mean_diff_min_p26_27
+        - std_diff_mean_p26_27
+        - std_diff_max_p26_27
+        - std_diff_min_p26_27
+        - l2_distance_mean_p6_7
+        - l2_distance_max_p6_7
+        - l2_distance_min_p6_7
+        - l2_distance_mean_p22_23
+        - l2_distance_max_p22_23
+        - l2_distance_min_p22_23
+        - l2_distance_mean_p23_24
+        - l2_distance_max_p23_24
+        - l2_distance_min_p23_24
+        - l2_distance_mean_p24_25
+        - l2_distance_max_p24_25
+        - l2_distance_min_p24_25
+        - l2_distance_mean_p25_26
+        - l2_distance_max_p25_26
+        - l2_distance_min_p25_26
+        - l2_distance_mean_p26_27
+        - l2_distance_max_p26_27
+        - l2_distance_min_p26_27
+        - significance
+        - label
+        column_count: 79
+        unique_orig_ids: 4250
+        unique_sample_uids: 13739
+        label_counts:
+          '0': 12425
+          '1': 1314
+        significance_counts:
+          '-1': 5
+          '0': 12928
+          '1': 123
+          '2': 683
+        significant_sdc_target_counts:
+          '0': 13056
+          '1': 683
+    valid_csv:
+      role: valid_csv
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_valid_set.csv
+      exists: true
+      size_bytes: 3403146
+      mtime_ns: 1782915821800786252
+      sha256: 7bd6aa4be799166fb50e63c0e93e3ed1027e076b2dd603d147b6e22432fbb25c
+      data_summary:
+        rows: 2419
+        columns:
+        - orig_id
+        - sample_uid
+        - total_steps
+        - last_k_steps
+        - num_steps_used
+        - cos_sim_mean_p6_7
+        - cos_sim_max_p6_7
+        - cos_sim_min_p6_7
+        - mean_diff_mean_p6_7
+        - mean_diff_max_p6_7
+        - mean_diff_min_p6_7
+        - std_diff_mean_p6_7
+        - std_diff_max_p6_7
+        - std_diff_min_p6_7
+        - cos_sim_mean_p22_23
+        - cos_sim_max_p22_23
+        - cos_sim_min_p22_23
+        - mean_diff_mean_p22_23
+        - mean_diff_max_p22_23
+        - mean_diff_min_p22_23
+        - std_diff_mean_p22_23
+        - std_diff_max_p22_23
+        - std_diff_min_p22_23
+        - cos_sim_mean_p23_24
+        - cos_sim_max_p23_24
+        - cos_sim_min_p23_24
+        - mean_diff_mean_p23_24
+        - mean_diff_max_p23_24
+        - mean_diff_min_p23_24
+        - std_diff_mean_p23_24
+        - std_diff_max_p23_24
+        - std_diff_min_p23_24
+        - cos_sim_mean_p24_25
+        - cos_sim_max_p24_25
+        - cos_sim_min_p24_25
+        - mean_diff_mean_p24_25
+        - mean_diff_max_p24_25
+        - mean_diff_min_p24_25
+        - std_diff_mean_p24_25
+        - std_diff_max_p24_25
+        - std_diff_min_p24_25
+        - cos_sim_mean_p25_26
+        - cos_sim_max_p25_26
+        - cos_sim_min_p25_26
+        - mean_diff_mean_p25_26
+        - mean_diff_max_p25_26
+        - mean_diff_min_p25_26
+        - std_diff_mean_p25_26
+        - std_diff_max_p25_26
+        - std_diff_min_p25_26
+        - cos_sim_mean_p26_27
+        - cos_sim_max_p26_27
+        - cos_sim_min_p26_27
+        - mean_diff_mean_p26_27
+        - mean_diff_max_p26_27
+        - mean_diff_min_p26_27
+        - std_diff_mean_p26_27
+        - std_diff_max_p26_27
+        - std_diff_min_p26_27
+        - l2_distance_mean_p6_7
+        - l2_distance_max_p6_7
+        - l2_distance_min_p6_7
+        - l2_distance_mean_p22_23
+        - l2_distance_max_p22_23
+        - l2_distance_min_p22_23
+        - l2_distance_mean_p23_24
+        - l2_distance_max_p23_24
+        - l2_distance_min_p23_24
+        - l2_distance_mean_p24_25
+        - l2_distance_max_p24_25
+        - l2_distance_min_p24_25
+        - l2_distance_mean_p25_26
+        - l2_distance_max_p25_26
+        - l2_distance_min_p25_26
+        - l2_distance_mean_p26_27
+        - l2_distance_max_p26_27
+        - l2_distance_min_p26_27
+        - significance
+        - label
+        column_count: 79
+        unique_orig_ids: 750
+        unique_sample_uids: 2419
+        label_counts:
+          '0': 2189
+          '1': 230
+        significance_counts:
+          '0': 2267
+          '1': 30
+          '2': 122
+        significant_sdc_target_counts:
+          '0': 2297
+          '1': 122
+    metrics:
+      role: metrics
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/output/metrics_summary.json
+      exists: true
+      size_bytes: 17209
+      mtime_ns: 1785069804379353847
+      sha256: 2bdc3ab8884ad22a8f7351daa3adc6a4659fb8d2d67f4443590c65ed84aa4b53
+      snapshot:
+        train_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_train_set.csv
+        valid_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_valid_set.csv
+        group_col: orig_id
+        training_nan_policy: keep_all_feature_nan
+        evaluation_splits:
+        - valid_full_metrics
+        - valid_non_all_nan_metrics
+        model_summary:
+          train_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_train_set.csv
+          valid_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_valid_set.csv
+          group_col: orig_id
+          output_subdir: train_with_nan
+          task_type: binary_significant_sdc
+          class_names:
+            '0': non_significant_sdc
+            '1': significant_sdc
+          target_definition:
+            '0': 'non-significant samples: original label == 0 or non-significant
+              original label == 1'
+            '1': 'significant_sdc: original label == 2, or original label == 1 and
+              significance == 2'
+          feature_count: 72
+          feature_columns:
+          - cos_sim_mean_p6_7
+          - cos_sim_max_p6_7
+          - cos_sim_min_p6_7
+          - mean_diff_mean_p6_7
+          - mean_diff_max_p6_7
+          - mean_diff_min_p6_7
+          - std_diff_mean_p6_7
+          - std_diff_max_p6_7
+          - std_diff_min_p6_7
+          - cos_sim_mean_p22_23
+          - cos_sim_max_p22_23
+          - cos_sim_min_p22_23
+          - mean_diff_mean_p22_23
+          - mean_diff_max_p22_23
+          - mean_diff_min_p22_23
+          - std_diff_mean_p22_23
+          - std_diff_max_p22_23
+          - std_diff_min_p22_23
+          - cos_sim_mean_p23_24
+          - cos_sim_max_p23_24
+          - cos_sim_min_p23_24
+          - mean_diff_mean_p23_24
+          - mean_diff_max_p23_24
+          - mean_diff_min_p23_24
+          - std_diff_mean_p23_24
+          - std_diff_max_p23_24
+          - std_diff_min_p23_24
+          - cos_sim_mean_p24_25
+          - cos_sim_max_p24_25
+          - cos_sim_min_p24_25
+          - mean_diff_mean_p24_25
+          - mean_diff_max_p24_25
+          - mean_diff_min_p24_25
+          - std_diff_mean_p24_25
+          - std_diff_max_p24_25
+          - std_diff_min_p24_25
+          - cos_sim_mean_p25_26
+          - cos_sim_max_p25_26
+          - cos_sim_min_p25_26
+          - mean_diff_mean_p25_26
+          - mean_diff_max_p25_26
+          - mean_diff_min_p25_26
+          - std_diff_mean_p25_26
+          - std_diff_max_p25_26
+          - std_diff_min_p25_26
+          - cos_sim_mean_p26_27
+          - cos_sim_max_p26_27
+          - cos_sim_min_p26_27
+          - mean_diff_mean_p26_27
+          - mean_diff_max_p26_27
+          - mean_diff_min_p26_27
+          - std_diff_mean_p26_27
+          - std_diff_max_p26_27
+          - std_diff_min_p26_27
+          - l2_distance_mean_p6_7
+          - l2_distance_max_p6_7
+          - l2_distance_min_p6_7
+          - l2_distance_mean_p22_23
+          - l2_distance_max_p22_23
+          - l2_distance_min_p22_23
+          - l2_distance_mean_p23_24
+          - l2_distance_max_p23_24
+          - l2_distance_min_p23_24
+          - l2_distance_mean_p24_25
+          - l2_distance_max_p24_25
+          - l2_distance_min_p24_25
+          - l2_distance_mean_p25_26
+          - l2_distance_max_p25_26
+          - l2_distance_min_p25_26
+          - l2_distance_mean_p26_27
+          - l2_distance_max_p26_27
+          - l2_distance_min_p26_27
+          all_feature_nan_filter_stats:
+            training_policy: keep_all_feature_nan
+            drop_all_feature_nan_for_training: false
+            train_all_feature_nan: 549
+            valid_all_feature_nan: 102
+            train_all_feature_nan_label_significance_counts:
+              label=1, significance=-1: 1
+              label=1, significance=0: 143
+              label=1, significance=1: 2
+              label=1, significance=2: 403
+            valid_all_feature_nan_label_significance_counts:
+              label=1, significance=0: 26
+              label=1, significance=2: 76
+          train_full_label_significance_counts:
+            label=0, significance=0: 12425
+            label=1, significance=-1: 5
+            label=1, significance=0: 503
+            label=1, significance=1: 123
+            label=1, significance=2: 683
+          valid_full_label_significance_counts:
+            label=0, significance=0: 2189
+            label=1, significance=0: 78
+            label=1, significance=1: 30
+            label=1, significance=2: 122
+          train_rows_used: 13739
+          test_rows: 2062
+          valid_full_rows: 2419
+          valid_non_all_nan_rows: 2317
+          train_info:
+            train_distribution:
+              total: 11677
+              counts:
+                '0': 11098
+                '1': 579
+              rates:
+                '0': 0.9504153464074677
+                '1': 0.04958465359253233
+            test_distribution:
+              total: 2062
+              counts:
+                '0': 1958
+                '1': 104
+              rates:
+                '0': 0.9495635305528612
+                '1': 0.0504364694471387
+            class_weights:
+              '0': 0.5260857812218418
+              '1': 10.08376511226252
+            best_iteration: 560
+            best_score: 0.01794374393792434
+          test_metrics:
+            confusion_matrix:
+            - - 1934
+              - 24
+            - - 13
+              - 91
+            accuracy: 0.9820562560620757
+            macro_precision: 0.892313704472879
+            macro_recall: 0.9313712972420838
+            macro_f1: 0.9107875981501294
+            weighted_precision: 0.9831339504588892
+            weighted_recall: 0.9820562560620757
+            weighted_f1: 0.9824816251543336
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 1958
+                pred_total: 1947
+                tp: 1934
+                fp: 13
+                fn: 24
+                tn: 91
+                precision: 0.9933230611196713
+                recall: 0.9877425944841676
+                f1: 0.9905249679897568
+                prob_mean: 0.9396375417709351
+              '1':
+                name: significant_sdc
+                support: 104
+                pred_total: 115
+                tp: 91
+                fp: 24
+                fn: 13
+                tn: 1934
+                precision: 0.7913043478260869
+                recall: 0.875
+                f1: 0.8310502283105022
+                prob_mean: 0.06036245822906494
+            classification_report:
+              non_significant_sdc:
+                precision: 0.9933230611196713
+                recall: 0.9877425944841676
+                f1-score: 0.9905249679897568
+                support: 1958.0
+              significant_sdc:
+                precision: 0.7913043478260869
+                recall: 0.875
+                f1-score: 0.8310502283105022
+                support: 104.0
+              accuracy: 0.9820562560620757
+              macro avg:
+                precision: 0.892313704472879
+                recall: 0.9313712972420838
+                f1-score: 0.9107875981501294
+                support: 2062.0
+              weighted avg:
+                precision: 0.9831339504588892
+                recall: 0.9820562560620757
+                f1-score: 0.9824816251543336
+                support: 2062.0
+            target_class_1:
+              name: significant_sdc
+              support: 104
+              pred_total: 115
+              tp: 91
+              fp: 24
+              fn: 13
+              tn: 1934
+              precision: 0.7913043478260869
+              recall: 0.875
+              f1: 0.8310502283105022
+              prob_mean: 0.06036245822906494
+            target_significant_sdc:
+              name: significant_sdc
+              support: 104
+              pred_total: 115
+              tp: 91
+              fp: 24
+              fn: 13
+              tn: 1934
+              precision: 0.7913043478260869
+              recall: 0.875
+              f1: 0.8310502283105022
+              prob_mean: 0.06036245822906494
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/output/train_with_nan/significant_sdc_binary_test_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/output/train_with_nan/significant_sdc_binary_test_wrong_predictions.csv
+              wrong_count: 37
+            label_significance_counts:
+              label=0, significance=0: 1864
+              label=1, significance=0: 74
+              label=1, significance=1: 20
+              label=1, significance=2: 104
+          valid_full_metrics:
+            confusion_matrix:
+            - - 2257
+              - 40
+            - - 13
+              - 109
+            accuracy: 0.9780901198842497
+            macro_precision: 0.8629083759571889
+            macro_recall: 0.9380143023330503
+            macro_f1: 0.8964115259720584
+            weighted_precision: 0.9810226112430717
+            weighted_recall: 0.9780901198842497
+            weighted_f1: 0.9791168061205762
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 2297
+                pred_total: 2270
+                tp: 2257
+                fp: 13
+                fn: 40
+                tn: 109
+                precision: 0.994273127753304
+                recall: 0.9825859817152808
+                f1: 0.9883950076636742
+                prob_mean: 0.933794379234314
+              '1':
+                name: significant_sdc
+                support: 122
+                pred_total: 149
+                tp: 109
+                fp: 40
+                fn: 13
+                tn: 2257
+                precision: 0.7315436241610739
+                recall: 0.8934426229508197
+                f1: 0.8044280442804428
+                prob_mean: 0.06620559841394424
+            classification_report:
+              non_significant_sdc:
+                precision: 0.994273127753304
+                recall: 0.9825859817152808
+                f1-score: 0.9883950076636742
+                support: 2297.0
+              significant_sdc:
+                precision: 0.7315436241610739
+                recall: 0.8934426229508197
+                f1-score: 0.8044280442804428
+                support: 122.0
+              accuracy: 0.9780901198842497
+              macro avg:
+                precision: 0.8629083759571889
+                recall: 0.9380143023330503
+                f1-score: 0.8964115259720584
+                support: 2419.0
+              weighted avg:
+                precision: 0.9810226112430717
+                recall: 0.9780901198842497
+                f1-score: 0.9791168061205762
+                support: 2419.0
+            target_class_1:
+              name: significant_sdc
+              support: 122
+              pred_total: 149
+              tp: 109
+              fp: 40
+              fn: 13
+              tn: 2257
+              precision: 0.7315436241610739
+              recall: 0.8934426229508197
+              f1: 0.8044280442804428
+              prob_mean: 0.06620559841394424
+            target_significant_sdc:
+              name: significant_sdc
+              support: 122
+              pred_total: 149
+              tp: 109
+              fp: 40
+              fn: 13
+              tn: 2257
+              precision: 0.7315436241610739
+              recall: 0.8934426229508197
+              f1: 0.8044280442804428
+              prob_mean: 0.06620559841394424
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/output/train_with_nan/significant_sdc_binary_valid_full_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/output/train_with_nan/significant_sdc_binary_valid_full_wrong_predictions.csv
+              wrong_count: 53
+            label_significance_counts:
+              label=0, significance=0: 2189
+              label=1, significance=0: 78
+              label=1, significance=1: 30
+              label=1, significance=2: 122
+          valid_non_all_nan_metrics:
+            confusion_matrix:
+            - - 2257
+              - 14
+            - - 13
+              - 33
+            accuracy: 0.9883470004315926
+            macro_precision: 0.848200393663886
+            macro_recall: 0.855613309593552
+            macro_f1: 0.8518657962222334
+            weighted_precision: 0.988473088246948
+            weighted_recall: 0.9883470004315926
+            weighted_f1: 0.9884083678795283
+            per_class:
+              '0':
+                name: non_significant_sdc
+                support: 2271
+                pred_total: 2270
+                tp: 2257
+                fp: 13
+                fn: 14
+                tn: 33
+                precision: 0.994273127753304
+                recall: 0.9938353148392779
+                f1: 0.9940541730896278
+                prob_mean: 0.9740254282951355
+              '1':
+                name: significant_sdc
+                support: 46
+                pred_total: 47
+                tp: 33
+                fp: 14
+                fn: 13
+                tn: 2257
+                precision: 0.7021276595744681
+                recall: 0.717391304347826
+                f1: 0.7096774193548387
+                prob_mean: 0.025974536314606667
+            classification_report:
+              non_significant_sdc:
+                precision: 0.994273127753304
+                recall: 0.9938353148392779
+                f1-score: 0.9940541730896278
+                support: 2271.0
+              significant_sdc:
+                precision: 0.7021276595744681
+                recall: 0.717391304347826
+                f1-score: 0.7096774193548387
+                support: 46.0
+              accuracy: 0.9883470004315926
+              macro avg:
+                precision: 0.848200393663886
+                recall: 0.855613309593552
+                f1-score: 0.8518657962222334
+                support: 2317.0
+              weighted avg:
+                precision: 0.988473088246948
+                recall: 0.9883470004315926
+                f1-score: 0.9884083678795283
+                support: 2317.0
+            target_class_1:
+              name: significant_sdc
+              support: 46
+              pred_total: 47
+              tp: 33
+              fp: 14
+              fn: 13
+              tn: 2257
+              precision: 0.7021276595744681
+              recall: 0.717391304347826
+              f1: 0.7096774193548387
+              prob_mean: 0.025974536314606667
+            target_significant_sdc:
+              name: significant_sdc
+              support: 46
+              pred_total: 47
+              tp: 33
+              fp: 14
+              fn: 13
+              tn: 2257
+              precision: 0.7021276595744681
+              recall: 0.717391304347826
+              f1: 0.7096774193548387
+              prob_mean: 0.025974536314606667
+            prediction_files:
+              predictions_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/output/train_with_nan/significant_sdc_binary_valid_non_all_nan_predictions.csv
+              wrong_predictions_csv: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/output/train_with_nan/significant_sdc_binary_valid_non_all_nan_wrong_predictions.csv
+              wrong_count: 27
+            label_significance_counts:
+              label=0, significance=0: 2189
+              label=1, significance=0: 52
+              label=1, significance=1: 30
+              label=1, significance=2: 46
+          feature_importance_top20:
+          - feature: l2_distance_mean_p25_26
+            importance: 0.44402647018432617
+          - feature: l2_distance_max_p25_26
+            importance: 0.17847569286823273
+          - feature: cos_sim_min_p26_27
+            importance: 0.06732569634914398
+          - feature: l2_distance_max_p26_27
+            importance: 0.045358724892139435
+          - feature: l2_distance_max_p24_25
+            importance: 0.02821107767522335
+          - feature: std_diff_max_p25_26
+            importance: 0.016983594745397568
+          - feature: l2_distance_max_p22_23
+            importance: 0.009242570027709007
+          - feature: std_diff_min_p24_25
+            importance: 0.008683341555297375
+          - feature: cos_sim_max_p25_26
+            importance: 0.008407720364630222
+          - feature: cos_sim_mean_p24_25
+            importance: 0.007907754741609097
+          - feature: mean_diff_mean_p26_27
+            importance: 0.007614171132445335
+          - feature: cos_sim_mean_p22_23
+            importance: 0.007329919375479221
+          - feature: std_diff_mean_p26_27
+            importance: 0.007309415843337774
+          - feature: mean_diff_mean_p24_25
+            importance: 0.007204060442745686
+          - feature: l2_distance_min_p24_25
+            importance: 0.006959016900509596
+          - feature: cos_sim_min_p22_23
+            importance: 0.0064842356368899345
+          - feature: l2_distance_mean_p24_25
+            importance: 0.005393027327954769
+          - feature: mean_diff_min_p26_27
+            importance: 0.004680429585278034
+          - feature: cos_sim_max_p23_24
+            importance: 0.0045737773180007935
+          - feature: cos_sim_mean_p26_27
+            importance: 0.004371219780296087
+- name: llava15_vqav2
+  model: llava15
+  dataset: vqav2
+  files:
+    labeled_jsonl:
+      role: labeled_jsonl
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/VQAv2/json/detect_VQAv2_llava_with_sem_project_labeled.jsonl
+      exists: true
+      size_bytes: 24142514
+      mtime_ns: 1784640727291422417
+      sha256: cd2efbcdb734626ee0e1df91b4b56e6ca89a341f00a5495734f732a94c3228e5
+      rows: 1152
+    train_csv:
+      role: train_csv
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/VQAv2/train_data/llava-v1.5-7B_train_set.csv
+      exists: true
+      size_bytes: 1426924
+      mtime_ns: 1785072693068079835
+      sha256: 67c6d12dbca3f907f00c6a2de9a8a6f29e1031fdaaeb3f45d1802e12a83e6edd
+      data_summary:
+        rows: 979
+        columns:
+        - orig_id
+        - sample_uid
+        - total_steps
+        - last_k_steps
+        - num_steps_used
+        - cos_sim_mean_p6_7
+        - cos_sim_max_p6_7
+        - cos_sim_min_p6_7
+        - mean_diff_mean_p6_7
+        - mean_diff_max_p6_7
+        - mean_diff_min_p6_7
+        - std_diff_mean_p6_7
+        - std_diff_max_p6_7
+        - std_diff_min_p6_7
+        - cos_sim_mean_p22_23
+        - cos_sim_max_p22_23
+        - cos_sim_min_p22_23
+        - mean_diff_mean_p22_23
+        - mean_diff_max_p22_23
+        - mean_diff_min_p22_23
+        - std_diff_mean_p22_23
+        - std_diff_max_p22_23
+        - std_diff_min_p22_23
+        - cos_sim_mean_p23_24
+        - cos_sim_max_p23_24
+        - cos_sim_min_p23_24
+        - mean_diff_mean_p23_24
+        - mean_diff_max_p23_24
+        - mean_diff_min_p23_24
+        - std_diff_mean_p23_24
+        - std_diff_max_p23_24
+        - std_diff_min_p23_24
+        - cos_sim_mean_p24_25
+        - cos_sim_max_p24_25
+        - cos_sim_min_p24_25
+        - mean_diff_mean_p24_25
+        - mean_diff_max_p24_25
+        - mean_diff_min_p24_25
+        - std_diff_mean_p24_25
+        - std_diff_max_p24_25
+        - std_diff_min_p24_25
+        - cos_sim_mean_p25_26
+        - cos_sim_max_p25_26
+        - cos_sim_min_p25_26
+        - mean_diff_mean_p25_26
+        - mean_diff_max_p25_26
+        - mean_diff_min_p25_26
+        - std_diff_mean_p25_26
+        - std_diff_max_p25_26
+        - std_diff_min_p25_26
+        - cos_sim_mean_p26_27
+        - cos_sim_max_p26_27
+        - cos_sim_min_p26_27
+        - mean_diff_mean_p26_27
+        - mean_diff_max_p26_27
+        - mean_diff_min_p26_27
+        - std_diff_mean_p26_27
+        - std_diff_max_p26_27
+        - std_diff_min_p26_27
+        - l2_distance_mean_p6_7
+        - l2_distance_max_p6_7
+        - l2_distance_min_p6_7
+        - l2_distance_mean_p22_23
+        - l2_distance_max_p22_23
+        - l2_distance_min_p22_23
+        - l2_distance_mean_p23_24
+        - l2_distance_max_p23_24
+        - l2_distance_min_p23_24
+        - l2_distance_mean_p24_25
+        - l2_distance_max_p24_25
+        - l2_distance_min_p24_25
+        - l2_distance_mean_p25_26
+        - l2_distance_max_p25_26
+        - l2_distance_min_p25_26
+        - l2_distance_mean_p26_27
+        - l2_distance_max_p26_27
+        - l2_distance_min_p26_27
+        - significance
+        - label
+        column_count: 79
+        unique_orig_ids: 979
+        unique_sample_uids: 979
+        label_counts:
+          '0': 979
+        significance_counts:
+          '0': 979
+        significant_sdc_target_counts:
+          '0': 979
+    valid_csv:
+      role: valid_csv
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/VQAv2/train_data/llava-v1.5-7B_valid_set.csv
+      exists: true
+      size_bytes: 253308
+      mtime_ns: 1785072693078080218
+      sha256: 037af04db34941866a58fdf028640969821162b69bc61a2b28e3429c0900b043
+      data_summary:
+        rows: 173
+        columns:
+        - orig_id
+        - sample_uid
+        - total_steps
+        - last_k_steps
+        - num_steps_used
+        - cos_sim_mean_p6_7
+        - cos_sim_max_p6_7
+        - cos_sim_min_p6_7
+        - mean_diff_mean_p6_7
+        - mean_diff_max_p6_7
+        - mean_diff_min_p6_7
+        - std_diff_mean_p6_7
+        - std_diff_max_p6_7
+        - std_diff_min_p6_7
+        - cos_sim_mean_p22_23
+        - cos_sim_max_p22_23
+        - cos_sim_min_p22_23
+        - mean_diff_mean_p22_23
+        - mean_diff_max_p22_23
+        - mean_diff_min_p22_23
+        - std_diff_mean_p22_23
+        - std_diff_max_p22_23
+        - std_diff_min_p22_23
+        - cos_sim_mean_p23_24
+        - cos_sim_max_p23_24
+        - cos_sim_min_p23_24
+        - mean_diff_mean_p23_24
+        - mean_diff_max_p23_24
+        - mean_diff_min_p23_24
+        - std_diff_mean_p23_24
+        - std_diff_max_p23_24
+        - std_diff_min_p23_24
+        - cos_sim_mean_p24_25
+        - cos_sim_max_p24_25
+        - cos_sim_min_p24_25
+        - mean_diff_mean_p24_25
+        - mean_diff_max_p24_25
+        - mean_diff_min_p24_25
+        - std_diff_mean_p24_25
+        - std_diff_max_p24_25
+        - std_diff_min_p24_25
+        - cos_sim_mean_p25_26
+        - cos_sim_max_p25_26
+        - cos_sim_min_p25_26
+        - mean_diff_mean_p25_26
+        - mean_diff_max_p25_26
+        - mean_diff_min_p25_26
+        - std_diff_mean_p25_26
+        - std_diff_max_p25_26
+        - std_diff_min_p25_26
+        - cos_sim_mean_p26_27
+        - cos_sim_max_p26_27
+        - cos_sim_min_p26_27
+        - mean_diff_mean_p26_27
+        - mean_diff_max_p26_27
+        - mean_diff_min_p26_27
+        - std_diff_mean_p26_27
+        - std_diff_max_p26_27
+        - std_diff_min_p26_27
+        - l2_distance_mean_p6_7
+        - l2_distance_max_p6_7
+        - l2_distance_min_p6_7
+        - l2_distance_mean_p22_23
+        - l2_distance_max_p22_23
+        - l2_distance_min_p22_23
+        - l2_distance_mean_p23_24
+        - l2_distance_max_p23_24
+        - l2_distance_min_p23_24
+        - l2_distance_mean_p24_25
+        - l2_distance_max_p24_25
+        - l2_distance_min_p24_25
+        - l2_distance_mean_p25_26
+        - l2_distance_max_p25_26
+        - l2_distance_min_p25_26
+        - l2_distance_mean_p26_27
+        - l2_distance_max_p26_27
+        - l2_distance_min_p26_27
+        - significance
+        - label
+        column_count: 79
+        unique_orig_ids: 173
+        unique_sample_uids: 173
+        label_counts:
+          '0': 173
+        significance_counts:
+          '0': 173
+        significant_sdc_target_counts:
+          '0': 173
+    metrics:
+      role: metrics
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/VQAv2/output/metrics_summary.json
+      exists: false

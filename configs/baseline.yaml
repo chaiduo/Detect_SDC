@@ -1,0 +1,62 @@
+baseline_id: pre_refactor_20260727
+
+source_revision:
+  commit: c193dc035dcd99e75305277498b502685bda5dde
+  branch: main
+  dirty: false
+  note: Worktree was verified clean immediately before the refactor files were added.
+
+experiments:
+  - name: qwen25_vl_earthvqa
+    model: qwen25_vl
+    dataset: earthvqa
+    files:
+      labeled_jsonl: Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project_labeled.jsonl
+      train_csv: Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_train_set.csv
+      valid_csv: Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_valid_set.csv
+      metrics: Qwen2.5-VL-7B/EarthVQA/output/metrics_summary.json
+
+  - name: qwen25_vl_lingoqa
+    model: qwen25_vl
+    dataset: lingoqa
+    files:
+      labeled_jsonl: Qwen2.5-VL-7B/LingoQA/json/detect_LingoQA_Qwen_with_sem_labeled.jsonl
+      train_csv: Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_train_set.csv
+      valid_csv: Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_valid_set.csv
+      metrics: Qwen2.5-VL-7B/LingoQA/output/metrics_summary.json
+
+  - name: qwen25_vl_vqav2
+    model: qwen25_vl
+    dataset: vqav2
+    files:
+      labeled_jsonl: Qwen2.5-VL-7B/VQAv2/json/detect_VQAv2_Qwen_with_sem_project_labeled.jsonl
+      train_csv: Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_train_set.csv
+      valid_csv: Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_valid_set.csv
+      metrics: Qwen2.5-VL-7B/VQAv2/output/metrics_summary.json
+
+  - name: llava15_earthvqa
+    model: llava15
+    dataset: earthvqa
+    files:
+      labeled_jsonl: llava-v1.5-7B/EarthVQA/json/detect_EarthVQA_llava_with_sem_project_labeled.jsonl
+      train_csv: llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_train_set.csv
+      valid_csv: llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_valid_set.csv
+      metrics: llava-v1.5-7B/EarthVQA/output/metrics_summary.json
+
+  - name: llava15_lingoqa
+    model: llava15
+    dataset: lingoqa
+    files:
+      labeled_jsonl: llava-v1.5-7B/LingoQA/json/detect_LingoQA_llava_with_sem_labeled2.jsonl
+      train_csv: llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_train_set.csv
+      valid_csv: llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_valid_set.csv
+      metrics: llava-v1.5-7B/LingoQA/output/metrics_summary.json
+
+  - name: llava15_vqav2
+    model: llava15
+    dataset: vqav2
+    files:
+      labeled_jsonl: llava-v1.5-7B/VQAv2/json/detect_VQAv2_llava_with_sem_project_labeled.jsonl
+      train_csv: llava-v1.5-7B/VQAv2/train_data/llava-v1.5-7B_train_set.csv
+      valid_csv: llava-v1.5-7B/VQAv2/train_data/llava-v1.5-7B_valid_set.csv
+      metrics: llava-v1.5-7B/VQAv2/output/metrics_summary.json

@@ -1,0 +1,44 @@
+name: llava15
+adapter: detect_sdc.adapters.models.llava15.Llava15Adapter
+model_path: /data01/cd_workspace/llm/llava-v1.5-7b
+model_base: null
+source_path: /data01/cd_workspace/llm/LLaVA
+
+generation:
+  max_new_tokens: 50
+  deterministic: true
+  answer_suffix: The answer must be limited to 30 words.
+
+instrumentation:
+  layer_count: 32
+  projection_dim: 64
+  projection_method: project
+  seed: 42
+
+mapping_training:
+  trainer: detect_sdc.mapping.llava.train_model
+  kwargs:
+    num_layers: 32
+    batch_size: 2048
+    lr: 0.0005
+    weight_decay: 0.0001
+    epochs: 500
+    num_workers: 4
+    valid_ratio: 0.15
+    test_ratio_in_train: 0.15
+    cosine_weight: 1.0
+    early_stop_patience: 5
+
+injection:
+  mapping_class: detect_sdc.mapping.llava.LayerAwareResidualMLP
+  mapping_kwargs:
+    x_dim: 64
+    num_layers: 32
+    layer_emb_dim: 16
+    hidden_dim: 256
+    num_blocks: 4
+    dropout: 0.1
+  fault_runs: 8
+  retain_all_fault_runs: 1
+  num_bits: 2
+  seed: 42

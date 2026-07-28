@@ -1,0 +1,19 @@
+name: lingoqa
+adapter: detect_sdc.adapters.datasets.lingoqa.LingoQAAdapter
+format: parquet_with_external_images
+
+paths:
+  annotations: /data01/cd_workspace/llm/LingoQA/val.parquet
+  images: /data01/cd_workspace/llm/LingoQA
+
+selection:
+  images_per_question: 5
+
+sampling:
+  max_samples: null
+  deterministic_order: true
+
+split:
+  group_column: orig_id
+  valid_ratio: 0.15
+  seed: 42

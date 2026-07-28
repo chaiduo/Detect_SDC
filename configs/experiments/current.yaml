@@ -1,0 +1,229 @@
+schema_version: 1
+name: current_significant_sdc_matrix
+
+models:
+  qwen25_vl: configs/models/qwen25_vl.yaml
+  llava15: configs/models/llava15.yaml
+
+datasets:
+  earthvqa: configs/datasets/earthvqa.yaml
+  lingoqa: configs/datasets/lingoqa.yaml
+  vqav2: configs/datasets/vqav2.yaml
+
+matrix:
+  - [qwen25_vl, earthvqa]
+  - [qwen25_vl, lingoqa]
+  - [qwen25_vl, vqav2]
+  - [llava15, earthvqa]
+  - [llava15, lingoqa]
+  - [llava15, vqav2]
+
+pipeline:
+  stages:
+    - profile
+    - collect_mapping
+    - train_mapping
+    - inject
+    - label
+    - featurize
+    - train_detector
+    - report
+
+execution:
+  jobs:
+    qwen25_vl_earthvqa:
+      model: qwen25_vl
+      dataset: earthvqa
+      injection:
+        fault_runs: 16
+      profile_output: Qwen2.5-VL-7B/EarthVQA/json/Golden_EarthVQA_Qwen2.5-VL-7B_30_CA.json
+      mapping_data: Qwen2.5-VL-7B/EarthVQA/json/attn_proj_mapping_64_project.jsonl
+      mapping_model: Qwen2.5-VL-7B/EarthVQA/model/best_mapping_model.pt
+      injected_output: Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project.jsonl
+      labeled_output: Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project_labeled.jsonl
+    qwen25_vl_lingoqa:
+      model: qwen25_vl
+      dataset: lingoqa
+      instrumentation:
+        projection_method: max
+      injection:
+        retain_all_fault_runs: 2
+      profile_output: Qwen2.5-VL-7B/LingoQA/json/Golden_LingoQA_Qwen2.5-VL-7B.json
+      mapping_data: Qwen2.5-VL-7B/LingoQA/json/attn_proj_interlayer.jsonl
+      mapping_model: Qwen2.5-VL-7B/LingoQA/model/lingoqa_mapping_model.pt
+      injected_output: Qwen2.5-VL-7B/LingoQA/json/detect_LingoQA_Qwen_with_sem.jsonl
+      labeled_output: Qwen2.5-VL-7B/LingoQA/json/detect_LingoQA_Qwen_with_sem_labeled.jsonl
+    qwen25_vl_vqav2:
+      model: qwen25_vl
+      dataset: vqav2
+      mapping_training:
+        trainer: detect_sdc.mapping.qwen_vqav2.train_model
+        kwargs:
+          num_layers: 28
+          batch_size: 2048
+          lr: 0.0005
+          weight_decay: 0.0001
+          epochs: 500
+          num_workers: 8
+          val_ratio: 0.1
+          test_ratio: 0.1
+          early_stop_patience: 15
+          scheduler_patience: 5
+          scheduler_factor: 0.5
+          min_lr: 0.000001
+          cosine_weight: 0.1
+          seed: 42
+          split_mode: random
+      profile_output: Qwen2.5-VL-7B/VQAv2/json/Golden_VQAv2_Qwen2.5-VL-7B_30_new.json
+      mapping_data: Qwen2.5-VL-7B/VQAv2/json/attn_proj_mapping_64_project.jsonl
+      mapping_model: Qwen2.5-VL-7B/VQAv2/model/best_mapping_model.pt
+      injected_output: Qwen2.5-VL-7B/VQAv2/json/detect_VQAv2_Qwen_with_sem_project.jsonl
+      labeled_output: Qwen2.5-VL-7B/VQAv2/json/detect_VQAv2_Qwen_with_sem_project_labeled.jsonl
+    llava15_earthvqa:
+      model: llava15
+      dataset: earthvqa
+      profile_output: llava-v1.5-7B/EarthVQA/json/Golden_EarthVQA_llava-v1.5-7B.json
+      mapping_data: llava-v1.5-7B/EarthVQA/json/attn_proj_mapping_64_project.jsonl
+      mapping_model: llava-v1.5-7B/EarthVQA/model/best_mapping_model.pt
+      injected_output: llava-v1.5-7B/EarthVQA/json/detect_EarthVQA_llava_with_sem_project.jsonl
+      labeled_output: llava-v1.5-7B/EarthVQA/json/detect_EarthVQA_llava_with_sem_project_labeled.jsonl
+    llava15_lingoqa:
+      model: llava15
+      dataset: lingoqa
+      instrumentation:
+        projection_method: max
+        seed: 1234
+      mapping_training:
+        trainer: detect_sdc.mapping.llava_lingoqa.train_model
+        kwargs:
+          num_layers: 32
+          batch_size: 2048
+          lr: 0.0005
+          weight_decay: 0.0001
+          epochs: 500
+          num_workers: 8
+          valid_ratio: 0.15
+          test_ratio_in_train: 0.15
+          cosine_weight: 1.0
+          early_stop_patience: 15
+          scheduler_patience: 5
+          scheduler_factor: 0.5
+          min_lr: 0.000001
+          seed: 42
+      injection:
+        mapping_class: detect_sdc.mapping.llava_lingoqa.LayerAwareResidualMLP
+        mapping_kwargs:
+          x_dim: 64
+          num_layers: 32
+          layer_emb_dim: 16
+          hidden_dim: 1024
+          num_blocks: 8
+          dropout: 0.1
+      profile_output: llava-v1.5-7B/LingoQA/json/Golden_LingoQA_llava-v1.5-7B.json
+      mapping_data: llava-v1.5-7B/LingoQA/json/attn_proj_interlayer.jsonl
+      mapping_model: llava-v1.5-7B/LingoQA/model/lingoqa_mapping_model.pt
+      injected_output: llava-v1.5-7B/LingoQA/json/detect_LingoQA_llava_with_sem.jsonl
+      labeled_output: llava-v1.5-7B/LingoQA/json/detect_LingoQA_llava_with_sem_labeled2.jsonl
+    llava15_vqav2:
+      model: llava15
+      dataset: vqav2
+      profile_output: llava-v1.5-7B/VQAv2/json/Golden_VQAv2_llava-v1.5-7B.json
+      mapping_data: llava-v1.5-7B/VQAv2/json/attn_proj_mapping_64_project.jsonl
+      mapping_model: llava-v1.5-7B/VQAv2/model/best_mapping_model.pt
+      injected_output: llava-v1.5-7B/VQAv2/json/detect_VQAv2_llava_with_sem_project.jsonl
+      labeled_output: llava-v1.5-7B/VQAv2/json/detect_VQAv2_llava_with_sem_project_labeled.jsonl
+
+labeling:
+  model_path: /data01/cd_workspace/llm/prometheus-7b-v2.0
+  max_new_tokens: 200
+  identical_answer_policy: skip_and_mark_correct
+  quality_scale: [0, 1, 2]
+  significance_scale: [2, 1, 0]
+
+features:
+  last_k_steps: 50
+  statistics: [mean, max, min]
+  metrics: [cos_sim, mean_diff, std_diff, l2_distance]
+  finite_only: true
+  layer_pairs:
+    - [6, 7]
+    - [22, 23]
+    - [23, 24]
+    - [24, 25]
+    - [25, 26]
+    - [26, 27]
+  distance_pairs:
+    - [6, 7]
+    - [22, 23]
+    - [23, 24]
+    - [24, 25]
+    - [25, 26]
+    - [26, 27]
+
+featurization:
+  jobs:
+    qwen25_vl_earthvqa:
+      model: qwen25_vl
+      dataset: earthvqa
+      input: Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project_labeled.jsonl
+      train_output: Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_train_set.csv
+      valid_output: Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_valid_set.csv
+    qwen25_vl_lingoqa:
+      model: qwen25_vl
+      dataset: lingoqa
+      input: Qwen2.5-VL-7B/LingoQA/json/detect_LingoQA_Qwen_with_sem_labeled.jsonl
+      train_output: Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_train_set.csv
+      valid_output: Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_valid_set.csv
+    qwen25_vl_vqav2:
+      model: qwen25_vl
+      dataset: vqav2
+      input: Qwen2.5-VL-7B/VQAv2/json/detect_VQAv2_Qwen_with_sem_project_labeled.jsonl
+      train_output: Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_train_set.csv
+      valid_output: Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_valid_set.csv
+    llava15_earthvqa:
+      model: llava15
+      dataset: earthvqa
+      input: llava-v1.5-7B/EarthVQA/json/detect_EarthVQA_llava_with_sem_project_labeled.jsonl
+      train_output: llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_train_set.csv
+      valid_output: llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_valid_set.csv
+    llava15_lingoqa:
+      model: llava15
+      dataset: lingoqa
+      input: llava-v1.5-7B/LingoQA/json/detect_LingoQA_llava_with_sem_labeled2.jsonl
+      train_output: llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_train_set.csv
+      valid_output: llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_valid_set.csv
+    llava15_vqav2:
+      model: llava15
+      dataset: vqav2
+      input: llava-v1.5-7B/VQAv2/json/detect_VQAv2_llava_with_sem_project_labeled.jsonl
+      train_output: llava-v1.5-7B/VQAv2/train_data/llava-v1.5-7B_train_set.csv
+      valid_output: llava-v1.5-7B/VQAv2/train_data/llava-v1.5-7B_valid_set.csv
+
+detector:
+  task: binary_significant_sdc
+  group_column: orig_id
+  keep_all_feature_nan_in_training: true
+  evaluation_slices: [full, non_all_feature_nan]
+  random_state: 42
+  xgboost:
+    common:
+      n_estimators: 10000
+      max_depth: 6
+      min_child_weight: 1.0
+      subsample: 0.9
+      colsample_bytree: 0.9
+      early_stopping_rounds: 500
+      test_ratio: 0.15
+      random_state: 42
+      n_jobs: 8
+      device: cpu
+      verbose: 200
+    by_model:
+      qwen25_vl:
+        learning_rate: 0.02
+      llava15:
+        learning_rate: 0.01
+
+artifacts:
+  root: artifacts
+  overwrite: false

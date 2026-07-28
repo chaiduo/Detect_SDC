@@ -59,6 +59,7 @@ viz_*/
 train_data/
 test_data/
 valid_data/
+artifacts/
 
 # Logs
 *.log

@@ -1,0 +1,50 @@
+name: qwen25_vl
+adapter: detect_sdc.adapters.models.qwen25_vl.Qwen25VLAdapter
+model_path: /data01/cd_workspace/llm/Qwen2.5-VL-7B-Instruct
+
+generation:
+  max_new_tokens: 50
+  deterministic: true
+  answer_suffix: The answer must be limited to 30 words.
+
+vision:
+  min_pixels: 200704
+  max_pixels: 1003520
+
+instrumentation:
+  layer_count: 28
+  projection_dim: 64
+  projection_method: project
+  seed: 42
+
+mapping_training:
+  trainer: detect_sdc.mapping.qwen.train_model
+  kwargs:
+    num_layers: 28
+    batch_size: 2048
+    lr: 0.0005
+    weight_decay: 0.0001
+    epochs: 500
+    num_workers: 4
+    valid_ratio: 0.15
+    test_ratio_in_train: 0.15
+    cosine_weight: 1.0
+    early_stop_patience: 5
+    scheduler_patience: 5
+    scheduler_factor: 0.5
+    min_lr: 0.000001
+    seed: 42
+
+injection:
+  mapping_class: detect_sdc.mapping.qwen.LayerAwareResidualMLP
+  mapping_kwargs:
+    x_dim: 64
+    num_layers: 28
+    layer_emb_dim: 16
+    hidden_dim: 64
+    num_blocks: 4
+    dropout: 0.1
+  fault_runs: 8
+  retain_all_fault_runs: 1
+  num_bits: 2
+  seed: 42

@@ -1,0 +1,16 @@
+name: vqav2
+adapter: detect_sdc.adapters.datasets.vqav2.VQAv2Adapter
+format: parquet_with_embedded_images
+
+paths:
+  parquet: /data01/cd_workspace/llm/VQAv2
+
+sampling:
+  max_samples: 5000
+  deterministic_order: true
+
+split:
+  group_column: orig_id
+  valid_ratio: 0.15
+  seed: 42
+
