@@ -116,7 +116,7 @@ PYTHONPATH=src python -m detect_sdc.cli train \
   --job llava15_earthvqa
 ```
 
-六个旧 `train_xgboost.py` 只是这个入口的兼容包装器。
+`detect-sdc`（或 `python -m detect_sdc.cli`）是唯一支持的训练入口。
 
 ## 8. Layer-pair 实验
 

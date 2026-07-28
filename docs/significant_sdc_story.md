@@ -36,15 +36,17 @@
 
 ## 3. 如何定义“显著 SDC”
 
-为了把“显著”这个概念从主观描述变成可训练标签，我们使用 `LLM-judge` 对样本进行语义层面的严重程度标注。具体实现见：
+为了把“显著”这个概念从主观描述变成可训练标签，我们使用 `LLM-judge` 对样本进行语义层面的质量标注。具体实现位于 `detect_sdc.labeling`。
 
-- [`utils/add_label_with_prometheus.py:L49-L53`](file:///data01/cd_workspace/Detect_SDC/utils/add_label_with_prometheus.py#L49-L53)
+`quality_score` 的评分规则为：
 
-其评分规则为：
+- `quality_score = 2`: 回答正确，与参考答案一致或语义等价
+- `quality_score = 1`: 回答有轻微偏差，但仍部分正确
+- `quality_score = 0`: 回答错误，或存在严重语义错误
 
-- `Score 0`: 回答完全正确，与参考答案一致
-- `Score 1`: 回答有轻微偏差，但语义仍然正确
-- `Score 2`: 回答完全错误，或存在语义性错误
+下游严重度定义为：
+
+`significance = 2 - quality_score`
 
 在本文的叙事里，我们把：
 

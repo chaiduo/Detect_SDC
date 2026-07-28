@@ -5,12 +5,12 @@ from __future__ import annotations
 import json
 import re
 from collections import Counter
+from enum import Enum
 from pathlib import Path
 from typing import Any, Mapping, Protocol, Sequence
 
 from .config import load_yaml
 from .pipeline.jobs import load_pipeline_job
-from .records import LabelStatus
 
 
 ABS_SYSTEM_PROMPT = (
@@ -45,6 +45,12 @@ Score 2: The response is semantically equivalent to the reference answer. It pre
 Score 1: The response has minor semantic deviations from the reference answer, but the core answer is still mostly preserved and the difference is unlikely to cause a wrong decision.
 Score 0: The response has a major semantic deviation from the reference answer, changes or loses the core answer, contradicts the reference answer, or would likely cause a wrong decision.
 """
+
+
+class LabelStatus(str, Enum):
+    VALID = "valid"
+    IDENTICAL_ANSWER = "identical_answer"
+    PARSE_ERROR = "parse_error"
 
 
 class Judge(Protocol):

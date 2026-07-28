@@ -496,62 +496,6 @@ def run_detector_job(
     return combined
 
 
-def run_legacy_xgboost(
-    train_csv: str | Path,
-    valid_csv: str | Path,
-    *,
-    group_col: str = "orig_id",
-    learning_rate: float = 0.01,
-    output_subdir: str | None = None,
-    clean_output: bool = True,
-    **_: Any,
-) -> dict[str, Any]:
-    train_path = Path(train_csv).resolve()
-    base_output = train_path.parent.parent / "output"
-    destination = base_output / output_subdir if output_subdir else base_output
-    return run_xgboost(
-        train_path,
-        valid_csv,
-        destination,
-        group_column=group_col,
-        config=XGBoostConfig(learning_rate=learning_rate),
-        clean_output=clean_output,
-    )
-
-
-def run_legacy_compare(
-    train_csv: str | Path,
-    valid_csv: str | Path,
-    *,
-    group_col: str = "orig_id",
-    learning_rate: float = 0.01,
-) -> dict[str, Any]:
-    train_path = Path(train_csv).resolve()
-    output = train_path.parent.parent / "output"
-    _clean_output_directory(output)
-    summary = run_legacy_xgboost(
-        train_path,
-        valid_csv,
-        group_col=group_col,
-        learning_rate=learning_rate,
-        output_subdir="train_with_nan",
-        clean_output=False,
-    )
-    combined = {
-        "train_csv": str(train_path),
-        "valid_csv": str(Path(valid_csv).resolve()),
-        "group_col": group_col,
-        "training_nan_policy": "keep_all_feature_nan",
-        "evaluation_splits": [
-            "valid_full_metrics",
-            "valid_non_all_nan_metrics",
-        ],
-        "model_summary": summary,
-    }
-    _atomic_write_json(output / "metrics_summary.json", combined)
-    return combined
-
-
 def _evaluate(
     model: XGBClassifier,
     frame: pd.DataFrame,

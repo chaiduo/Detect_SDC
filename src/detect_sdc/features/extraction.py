@@ -176,22 +176,12 @@ def iter_json_samples(
     *,
     max_samples: int | None = None,
 ) -> Iterator[Mapping[str, Any]]:
-    """Stream JSONL records; JSON arrays remain supported for small legacy files."""
+    """Stream JSONL records without loading the complete input."""
     if max_samples is not None and max_samples < 0:
         raise ValueError("max_samples must be non-negative or None")
     input_path = Path(path)
 
     with input_path.open("r", encoding="utf-8-sig") as stream:
-        first_character = _first_non_whitespace_character(stream)
-        stream.seek(0)
-        if first_character == "[":
-            data = json.load(stream)
-            if not isinstance(data, list):
-                raise ValueError(f"Expected a JSON array: {input_path}")
-            for sample in _limit(data, max_samples):
-                yield _require_mapping(sample, input_path)
-            return
-
         yielded = 0
         for line_number, line in enumerate(stream, 1):
             if not line.strip():
@@ -271,17 +261,6 @@ def _aggregate(
 
 def _pair_key(pair: LayerPair) -> str:
     return f"p{pair[0]}_{pair[1]}"
-
-
-def _first_non_whitespace_character(stream: Any) -> str:
-    while character := stream.read(1):
-        if not character.isspace():
-            return character
-    return ""
-
-
-def _limit(values: Sequence[Any], maximum: int | None) -> Sequence[Any]:
-    return values if maximum is None else values[:maximum]
 
 
 def _require_mapping(

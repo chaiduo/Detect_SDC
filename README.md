@@ -1,9 +1,8 @@
 # Detect SDC
 
-Detect SDC evaluates silent data corruption in multimodal language models. The
-canonical implementation lives under `src/detect_sdc/`; scripts under
-`Qwen2.5-VL-7B/` and `llava-v1.5-7B/` are compatibility entry points for
-existing jobs.
+Detect SDC evaluates silent data corruption in multimodal language models. All
+runtime code lives under `src/detect_sdc/`. The `Qwen2.5-VL-7B/` and
+`llava-v1.5-7B/` trees contain only configured inputs and experiment artifacts.
 
 ## Pipeline
 
@@ -26,12 +25,11 @@ The canonical pipeline stages are:
 - `fault_injector.py`: canonical activation and weight bit-flip implementation.
 - `labeling.py`: streaming Prometheus labeling with atomic outputs.
 - `profiler.py`: canonical model instrumentation and telemetry implementation.
-- `records.py`: records passed between pipeline stages.
 - `features`: shared 72-feature extraction and stable sample identities.
 - `splitting.py`: the only production `orig_id` grouped split implementation.
 - `detector`: binary significant-SDC training, evaluation, and layer-pair experiments.
 - `mapping`: one shared mapping architecture and trainer with configured job
-  profiles; four historical module paths remain thin compatibility APIs.
+  profiles.
 
 Torch, Transformers, Qwen, and LLaVA dependencies are imported lazily by the
 model and labeling adapters. Configuration inspection and dry-runs do not load
@@ -78,9 +76,8 @@ PYTHONPATH=src python -m detect_sdc.cli run \
   --dry-run
 ```
 
-`--stage` is repeatable. The six `allrun.sh` compatibility scripts call the
-same CLI for `profile`, `collect_mapping`, `train_mapping`, and `inject`; extra
-options such as `--dry-run`, `--overwrite`, and `--max-samples` are forwarded.
+`--stage` is repeatable. `detect-sdc` (or `python -m detect_sdc.cli`) is the
+only supported command entry point.
 
 The GPU stages use the same orthogonal model and dataset adapters:
 
@@ -139,7 +136,6 @@ The shared extractor enforces:
 
 Exact duplicate source samples are collapsed by stable UID. A UID collision
 with different feature content is rejected instead of being silently merged.
-The legacy extraction script paths remain as compatibility entry points.
 
 ## Detector
 
@@ -157,7 +153,7 @@ The layer-pair sweep is an experimental backend under
 `detect_sdc.detector.layer_pair_sweep`; it preserves threshold and ROC analysis
 but defaults to the canonical keep-all-NaN policy and significant-SDC target.
 
-## Compatibility
+## Runtime stages
 
 Mapping collection and fault injection are model-agnostic stages built from
 ModelAdapter, DatasetAdapter, Profiler, and FaultInjector. Both stages stream to
@@ -168,8 +164,7 @@ Mapping-model architecture, profiler projection, fault run count, retained
 full runs, bit count, and random seed are explicit model/job configuration.
 Mapping-model training is also a package stage and atomically publishes its
 checkpoint; trainer-specific split and optimization settings remain explicit
-configuration. Old mapping, semantic-injection, trainer, profiler, and
-fault-injector paths remain compatibility entry points.
+configuration.
 
 ## Baseline
 
@@ -203,10 +198,9 @@ Install the shared package and training dependencies:
 python -m pip install -e '.[train,dev]'
 ```
 
-Qwen jobs default to the workspace virtual environment. LLaVA compatibility
-scripts default to `llava-v1.5-7B/.venv` because the local LLaVA fork requires
-its pinned Transformers and SentencePiece versions. Set `PYTHON_BIN` to
-override either default. The LLaVA vision tower
+Run the unified CLI from an environment compatible with the selected model.
+The local LLaVA fork requires its pinned Transformers and SentencePiece
+versions. The LLaVA vision tower
 `openai/clip-vit-large-patch14-336` must be available in the Hugging Face cache
 for offline runs.
 
@@ -216,10 +210,9 @@ Run the package tests:
 python -m pytest
 ```
 
-## Migration policy
+## Pipeline invariants
 
-The old scripts are not removed until their replacement passes the frozen
-baseline. Each migration step must preserve:
+Changes to the pipeline must preserve:
 
 - grouping by `orig_id`;
 - zero overlap between train/test/valid groups;

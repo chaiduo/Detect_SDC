@@ -5,7 +5,6 @@ import torch
 from torch import nn
 
 from detect_sdc.fault_injector import FaultInjector
-from utils.fault_injector import FaultInjector as LegacyFaultInjector
 
 
 class _TinyModel(nn.Module):
@@ -22,9 +21,6 @@ class _TinyModel(nn.Module):
 
 
 class FaultInjectorTest(unittest.TestCase):
-    def test_legacy_path_reexports_canonical_class(self):
-        self.assertIs(LegacyFaultInjector, FaultInjector)
-
     def test_float32_flip_matches_raw_xor_and_deduplicates_bits(self):
         injector = FaultInjector(_TinyModel())
         value = torch.tensor([1.0], dtype=torch.float32)

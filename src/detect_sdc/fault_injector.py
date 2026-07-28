@@ -30,6 +30,8 @@ class FaultInjector:
             model: PyTorch 模型
             mode:  "activation" 或 "weight"
         """
+        if mode not in ("activation", "weight"):
+            raise ValueError("mode must be 'activation' or 'weight'")
         self.model = model
         self.mode = mode
 
@@ -57,9 +59,6 @@ class FaultInjector:
 
         # 在第几个 step 注入激活值故障
         self.inject_step = -1
-
-        # 总 step 数，用于归一化记录
-        self.total_steps = -1
 
         # 故障记录信息
         self.fault_info = None
@@ -462,12 +461,7 @@ class FaultInjector:
 
         # 如果没有指定注入 step，则随机选一个
         if self.inject_step == -1:
-            if "visual" in name or "vision" in name:
-                self.inject_step = 0
-            else:
-                if self.total_steps <= 0:
-                    # self.inject_step = random.randint(0, self.total_steps - 1)
-                    self.inject_step = 0  # 统一step0注入，方便查看故障传播
+            self.inject_step = 0
 
         self.fault_hook_handle = module.register_forward_hook(self.make_fault_hook())
 
@@ -627,14 +621,6 @@ class FaultInjector:
         self.weight_fault_injected = False
         self.weight_backup = None
 
-    def set_mode(self, mode: str):
-        """
-        设置注入模式。
-        """
-        if mode not in ["activation", "weight"]:
-            raise ValueError("mode must be 'activation' or 'weight'")
-        self.mode = mode
-
     def set_num_bits(self, num_bits: int):
         """
         设置随机注入时翻转的 bit 个数。
@@ -673,10 +659,3 @@ class FaultInjector:
             normalized = self._normalize_bit_positions(bit_positions)
             self.bit_positions = normalized
             self.num_bits = len(normalized)
-
-    def set_total_step(self, steps):
-        """
-        设置总 step 数。
-        activation 模式下用于随机生成 inject_step 和记录 forward_norm。
-        """
-        self.total_steps = steps
