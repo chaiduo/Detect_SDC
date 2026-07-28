@@ -30,7 +30,8 @@ The canonical pipeline stages are:
 - `features`: shared 72-feature extraction and stable sample identities.
 - `splitting.py`: the only production `orig_id` grouped split implementation.
 - `detector`: binary significant-SDC training, evaluation, and layer-pair experiments.
-- `mapping`: the four mapping-model architectures used by the six matrix jobs.
+- `mapping`: one shared mapping architecture and trainer with configured job
+  profiles; four historical module paths remain thin compatibility APIs.
 
 Torch, Transformers, Qwen, and LLaVA dependencies are imported lazily by the
 model and labeling adapters. Configuration inspection and dry-runs do not load

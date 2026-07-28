@@ -100,7 +100,23 @@ def load_pipeline_job(
     job_mapping_training = job.get("mapping_training", {})
     if not isinstance(job_mapping_training, Mapping):
         raise ValueError("pipeline job mapping_training must be a mapping")
-    mapping_training.update(job_mapping_training)
+    base_training_kwargs = mapping_training.get("kwargs", {})
+    job_training_kwargs = job_mapping_training.get("kwargs", {})
+    if not isinstance(base_training_kwargs, Mapping):
+        raise ValueError("model mapping_training.kwargs must be a mapping")
+    if not isinstance(job_training_kwargs, Mapping):
+        raise ValueError("pipeline mapping_training.kwargs must be a mapping")
+    mapping_training.update(
+        {
+            key: value
+            for key, value in job_mapping_training.items()
+            if key != "kwargs"
+        }
+    )
+    mapping_training["kwargs"] = {
+        **base_training_kwargs,
+        **job_training_kwargs,
+    }
 
     return PipelineJob(
         name=job_name,

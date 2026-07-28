@@ -57,23 +57,13 @@ execution:
       model: qwen25_vl
       dataset: vqav2
       mapping_training:
-        trainer: detect_sdc.mapping.qwen_vqav2.train_model
         kwargs:
-          num_layers: 28
-          batch_size: 2048
-          lr: 0.0005
-          weight_decay: 0.0001
-          epochs: 500
           num_workers: 8
-          val_ratio: 0.1
+          split_strategy: random
+          valid_ratio: 0.1
           test_ratio: 0.1
           early_stop_patience: 15
-          scheduler_patience: 5
-          scheduler_factor: 0.5
-          min_lr: 0.000001
           cosine_weight: 0.1
-          seed: 42
-          split_mode: random
       profile_output: Qwen2.5-VL-7B/VQAv2/json/Golden_VQAv2_Qwen2.5-VL-7B_30_new.json
       mapping_data: Qwen2.5-VL-7B/VQAv2/json/attn_proj_mapping_64_project.jsonl
       mapping_model: Qwen2.5-VL-7B/VQAv2/model/best_mapping_model.pt
@@ -94,24 +84,16 @@ execution:
         projection_method: max
         seed: 1234
       mapping_training:
-        trainer: detect_sdc.mapping.llava_lingoqa.train_model
         kwargs:
-          num_layers: 32
-          batch_size: 2048
-          lr: 0.0005
-          weight_decay: 0.0001
-          epochs: 500
           num_workers: 8
-          valid_ratio: 0.15
-          test_ratio_in_train: 0.15
-          cosine_weight: 1.0
+          cosine_weight: 2.0
           early_stop_patience: 15
-          scheduler_patience: 5
-          scheduler_factor: 0.5
-          min_lr: 0.000001
-          seed: 42
+          scheduler_enabled: true
+          pin_memory: true
+          persistent_workers: true
+          final_metrics: detailed
       injection:
-        mapping_class: detect_sdc.mapping.llava_lingoqa.LayerAwareResidualMLP
+        mapping_class: detect_sdc.mapping.LayerAwareResidualMLP
         mapping_kwargs:
           x_dim: 64
           num_layers: 32

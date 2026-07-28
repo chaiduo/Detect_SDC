@@ -18,25 +18,31 @@ instrumentation:
   seed: 42
 
 mapping_training:
-  trainer: detect_sdc.mapping.qwen.train_model
+  trainer: detect_sdc.mapping.train_model
   kwargs:
-    num_layers: 28
     batch_size: 2048
     lr: 0.0005
     weight_decay: 0.0001
     epochs: 500
     num_workers: 4
+    split_strategy: sequential
     valid_ratio: 0.15
+    test_ratio: 0.1
     test_ratio_in_train: 0.15
     cosine_weight: 1.0
     early_stop_patience: 5
+    scheduler_enabled: true
     scheduler_patience: 5
     scheduler_factor: 0.5
     min_lr: 0.000001
+    use_amp: true
+    pin_memory: true
+    persistent_workers: true
+    final_metrics: detailed
     seed: 42
 
 injection:
-  mapping_class: detect_sdc.mapping.qwen.LayerAwareResidualMLP
+  mapping_class: detect_sdc.mapping.LayerAwareResidualMLP
   mapping_kwargs:
     x_dim: 64
     num_layers: 28

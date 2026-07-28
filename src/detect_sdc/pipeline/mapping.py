@@ -208,9 +208,14 @@ def run_mapping_training_job(
     )
     config = job.mapping_training_config
     trainer = import_symbol(str(config["trainer"]))
-    trainer_kwargs = config.get("kwargs", {})
-    if not isinstance(trainer_kwargs, Mapping):
+    configured_kwargs = config.get("kwargs", {})
+    if not isinstance(configured_kwargs, Mapping):
         raise ValueError("mapping_training.kwargs must be a mapping")
+    trainer_kwargs = dict(configured_kwargs)
+    mapping_kwargs = job.injection_config.get("mapping_kwargs")
+    if not isinstance(mapping_kwargs, Mapping):
+        raise ValueError("injection.mapping_kwargs must be a mapping")
+    trainer_kwargs.setdefault("model_kwargs", dict(mapping_kwargs))
 
     summary = train_mapping_checkpoint(
         job.paths.mapping_data,
