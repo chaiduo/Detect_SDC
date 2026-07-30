@@ -21,16 +21,16 @@ class ExperimentConfigTest(unittest.TestCase):
         experiment.validate_references(REPOSITORY_ROOT)
 
         self.assertEqual(experiment.name, "current_significant_sdc_matrix")
-        self.assertEqual(len(experiment.matrix), 6)
+        self.assertEqual(len(experiment.matrix), 9)
         self.assertEqual(experiment.stages[0], PipelineStage.PROFILE)
         self.assertEqual(experiment.stages[-1], PipelineStage.REPORT)
         summary = validate_experiment_configuration(
             REPOSITORY_ROOT / "configs/experiments/current.yaml",
             repository_root=REPOSITORY_ROOT,
         )
-        self.assertEqual(summary["jobs"], 6)
+        self.assertEqual(summary["jobs"], 9)
 
-    def test_current_matrix_defines_all_six_feature_jobs(self):
+    def test_current_matrix_defines_existing_feature_inputs(self):
         config = REPOSITORY_ROOT / "configs/experiments/current.yaml"
         expected = {
             "qwen25_vl_earthvqa",

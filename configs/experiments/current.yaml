@@ -4,6 +4,7 @@ name: current_significant_sdc_matrix
 models:
   qwen25_vl: configs/models/qwen25_vl.yaml
   llava15: configs/models/llava15.yaml
+  internvl3: configs/models/internvl3.yaml
 
 datasets:
   earthvqa: configs/datasets/earthvqa.yaml
@@ -17,6 +18,9 @@ matrix:
   - [llava15, earthvqa]
   - [llava15, lingoqa]
   - [llava15, vqav2]
+  - [internvl3, earthvqa]
+  - [internvl3, lingoqa]
+  - [internvl3, vqav2]
 
 pipeline:
   stages:
@@ -114,6 +118,44 @@ execution:
       mapping_model: llava-v1.5-7B/VQAv2/model/best_mapping_model.pt
       injected_output: llava-v1.5-7B/VQAv2/json/detect_VQAv2_llava_with_sem_project.jsonl
       labeled_output: llava-v1.5-7B/VQAv2/json/detect_VQAv2_llava_with_sem_project_labeled.jsonl
+    internvl3_earthvqa:
+      model: internvl3
+      dataset: earthvqa
+      injection:
+        fault_runs: 16
+      profile_output: InternVL3-8B/EarthVQA/json/Golden_EarthVQA_InternVL3-8B.json
+      mapping_data: InternVL3-8B/EarthVQA/json/attn_proj_mapping_64_project.jsonl
+      mapping_model: InternVL3-8B/EarthVQA/model/best_mapping_model.pt
+      injected_output: InternVL3-8B/EarthVQA/json/detect_EarthVQA_InternVL3_with_sem_project.jsonl
+      labeled_output: InternVL3-8B/EarthVQA/json/detect_EarthVQA_InternVL3_with_sem_project_labeled.jsonl
+    internvl3_lingoqa:
+      model: internvl3
+      dataset: lingoqa
+      instrumentation:
+        projection_method: max
+      injection:
+        retain_all_fault_runs: 2
+      profile_output: InternVL3-8B/LingoQA/json/Golden_LingoQA_InternVL3-8B.json
+      mapping_data: InternVL3-8B/LingoQA/json/attn_proj_interlayer.jsonl
+      mapping_model: InternVL3-8B/LingoQA/model/lingoqa_mapping_model.pt
+      injected_output: InternVL3-8B/LingoQA/json/detect_LingoQA_InternVL3_with_sem.jsonl
+      labeled_output: InternVL3-8B/LingoQA/json/detect_LingoQA_InternVL3_with_sem_labeled.jsonl
+    internvl3_vqav2:
+      model: internvl3
+      dataset: vqav2
+      mapping_training:
+        kwargs:
+          num_workers: 8
+          split_strategy: random
+          valid_ratio: 0.1
+          test_ratio: 0.1
+          early_stop_patience: 15
+          cosine_weight: 0.1
+      profile_output: InternVL3-8B/VQAv2/json/Golden_VQAv2_InternVL3-8B.json
+      mapping_data: InternVL3-8B/VQAv2/json/attn_proj_mapping_64_project.jsonl
+      mapping_model: InternVL3-8B/VQAv2/model/best_mapping_model.pt
+      injected_output: InternVL3-8B/VQAv2/json/detect_VQAv2_InternVL3_with_sem_project.jsonl
+      labeled_output: InternVL3-8B/VQAv2/json/detect_VQAv2_InternVL3_with_sem_project_labeled.jsonl
 
 labeling:
   model_path: /data01/cd_workspace/llm/prometheus-7b-v2.0
@@ -180,6 +222,24 @@ featurization:
       input: llava-v1.5-7B/VQAv2/json/detect_VQAv2_llava_with_sem_project_labeled.jsonl
       train_output: llava-v1.5-7B/VQAv2/train_data/llava-v1.5-7B_train_set.csv
       valid_output: llava-v1.5-7B/VQAv2/train_data/llava-v1.5-7B_valid_set.csv
+    internvl3_earthvqa:
+      model: internvl3
+      dataset: earthvqa
+      input: InternVL3-8B/EarthVQA/json/detect_EarthVQA_InternVL3_with_sem_project_labeled.jsonl
+      train_output: InternVL3-8B/EarthVQA/train_data/InternVL3_EarthVQA_train_set.csv
+      valid_output: InternVL3-8B/EarthVQA/train_data/InternVL3_EarthVQA_valid_set.csv
+    internvl3_lingoqa:
+      model: internvl3
+      dataset: lingoqa
+      input: InternVL3-8B/LingoQA/json/detect_LingoQA_InternVL3_with_sem_labeled.jsonl
+      train_output: InternVL3-8B/LingoQA/train_data/InternVL3_LingoQA_train_set.csv
+      valid_output: InternVL3-8B/LingoQA/train_data/InternVL3_LingoQA_valid_set.csv
+    internvl3_vqav2:
+      model: internvl3
+      dataset: vqav2
+      input: InternVL3-8B/VQAv2/json/detect_VQAv2_InternVL3_with_sem_project_labeled.jsonl
+      train_output: InternVL3-8B/VQAv2/train_data/InternVL3_VQAv2_train_set.csv
+      valid_output: InternVL3-8B/VQAv2/train_data/InternVL3_VQAv2_valid_set.csv
 
 detector:
   task: binary_significant_sdc
@@ -205,6 +265,8 @@ detector:
         learning_rate: 0.02
       llava15:
         learning_rate: 0.01
+      internvl3:
+        learning_rate: 0.02
 
 artifacts:
   root: artifacts

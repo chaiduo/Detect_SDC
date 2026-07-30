@@ -6,6 +6,7 @@ from PIL import Image
 
 from detect_sdc.adapters import load_model_adapter
 from detect_sdc.adapters.models.images import load_pil_image
+from detect_sdc.adapters.models.internvl3 import InternVL3Adapter
 from detect_sdc.adapters.models.llava15 import Llava15Adapter
 from detect_sdc.adapters.models.qwen25_vl import Qwen25VLAdapter
 
@@ -31,6 +32,18 @@ class ModelAdapterTest(unittest.TestCase):
 
         self.assertIsInstance(adapter, Llava15Adapter)
         self.assertTrue(Path(adapter.source_path).is_dir())
+        self.assertIn("30 words", adapter.answer_suffix)
+        with self.assertRaisesRegex(RuntimeError, "not loaded"):
+            _ = adapter.model
+
+    def test_internvl3_adapter_loads_from_config_without_loading_weights(self):
+        adapter = load_model_adapter(
+            REPOSITORY_ROOT / "configs/models/internvl3.yaml"
+        )
+
+        self.assertIsInstance(adapter, InternVL3Adapter)
+        self.assertEqual(adapter.image_size, 448)
+        self.assertEqual(adapter.max_tiles, 12)
         self.assertIn("30 words", adapter.answer_suffix)
         with self.assertRaisesRegex(RuntimeError, "not loaded"):
             _ = adapter.model
