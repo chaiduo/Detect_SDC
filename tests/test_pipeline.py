@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from detect_sdc.adapters.datasets.base import DatasetSample
@@ -143,6 +144,12 @@ class _FakeInjector:
         self.model.fault_active = False
 
 
+class _AlwaysFaultInjector(_FakeInjector):
+    def inject(self):
+        self.model.fault_active = True
+        self.fault_info = {"bit_positions": list(range(self.num_bits))}
+
+
 class PipelineTest(unittest.TestCase):
     def test_profile_stage_preserves_stable_orig_id(self):
         model = _FakeModel()
@@ -181,12 +188,14 @@ class PipelineTest(unittest.TestCase):
             for name in names
         ]
 
-        self.assertTrue(all(job.paths.profile_output.suffix == ".json" for job in jobs))
-        self.assertTrue(all(job.paths.labeled_output.suffix == ".jsonl" for job in jobs))
-        self.assertEqual(jobs[1].projection_method, "max")
-        self.assertEqual(jobs[4].projection_method, "max")
+        self.assertTrue(all(job.paths.profile_output.name == "profile.json" for job in jobs))
+        self.assertTrue(all(job.paths.mapping_data.name == "mapping.jsonl" for job in jobs))
+        self.assertTrue(all(job.paths.injected_output.name == "injection.jsonl" for job in jobs))
+        self.assertTrue(all(job.paths.labeled_output.name == "labels.jsonl" for job in jobs))
+        self.assertEqual(jobs[1].projection_method, "project")
+        self.assertEqual(jobs[4].projection_method, "project")
         self.assertEqual(jobs[4].profiler_seed, 1234)
-        self.assertEqual(jobs[0].injection_config["fault_runs"], 16)
+        self.assertEqual(jobs[0].injection_config["fault_runs"], 10)
         self.assertEqual(
             jobs[4].injection_config["mapping_kwargs"]["hidden_dim"],
             1024,
@@ -273,8 +282,97 @@ class PipelineTest(unittest.TestCase):
         self.assertEqual(summary["rows_written"], 2)
         self.assertEqual(summary["sdc_rows_observed"], 1)
         self.assertEqual([row["injected"] for row in rows], [False, True])
+        self.assertEqual(
+            [row["sample_uid"] for row in rows],
+            ["stable-a:clean", "stable-a:fault:0"],
+        )
         self.assertEqual(rows[1]["is_sdc"], 1)
         self.assertTrue(model.closed)
+
+    def test_injection_resume_restarts_interrupted_run(self):
+        model = _FakeModel()
+        model.fault_active = False
+        original_generate = model.generate
+
+        def generate(question, image, *, max_new_tokens):
+            clean = original_generate(
+                question,
+                image,
+                max_new_tokens=max_new_tokens,
+            )
+            return f"{clean}:fault" if model.fault_active else clean
+
+        model.generate = generate
+        clean = CleanAnswerIndex(
+            by_sequence={0: "Question A:image-a:12"},
+            by_orig_id={},
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "injected.jsonl"
+            temporary = output.with_name("injected.jsonl.tmp")
+            temporary.write_text(
+                "\n".join(
+                    json.dumps(record)
+                    for record in (
+                        {
+                            "run_index": None,
+                            "is_sdc": 0,
+                            "marker": "clean",
+                        },
+                        {
+                            "run_index": 0,
+                            "is_sdc": 1,
+                            "marker": "completed",
+                        },
+                        {
+                            "run_index": 1,
+                            "is_sdc": 1,
+                            "marker": "partial",
+                        },
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            summary = run_injection_samples(
+                model,
+                _FakeDataset(),
+                _FakeMappingModel(),
+                clean,
+                output,
+                device="cpu",
+                max_samples=1,
+                max_new_tokens=12,
+                projection_dim=64,
+                projection_method="project",
+                profiler_seed=42,
+                fault_runs=3,
+                retain_all_fault_runs=1,
+                num_bits=2,
+                fault_seed=42,
+                resume_from_run=1,
+                profiler_factory=_FakeProfiler,
+                injector_factory=_AlwaysFaultInjector,
+            )
+            rows = [
+                json.loads(line)
+                for line in output.read_text(encoding="utf-8").splitlines()
+            ]
+
+        self.assertEqual(
+            [row["run_index"] for row in rows],
+            [None, 0, 1, 2],
+        )
+        self.assertEqual(
+            [row.get("marker") for row in rows],
+            ["clean", "completed", None, None],
+        )
+        self.assertEqual(summary["generated"], 4)
+        self.assertEqual(summary["rows_written"], 4)
+        self.assertEqual(summary["sdc_rows_observed"], 3)
+        self.assertEqual(summary["resumed_from_run"], 1)
 
     def test_all_mapping_trainers_resolve_from_configuration(self):
         config = REPOSITORY_ROOT / "configs/experiments/current.yaml"
@@ -383,6 +481,23 @@ class PipelineTest(unittest.TestCase):
 
         self.assertTrue(summary["dry_run"])
         self.assertEqual(summary["stage"], "collect_mapping")
+
+    def test_unified_runner_forwards_injection_resume_run(self):
+        with mock.patch(
+            "detect_sdc.pipeline.runner.run_injection_job",
+            return_value={"ok": True},
+        ) as run_injection:
+            summary = run_stage(
+                REPOSITORY_ROOT / "configs/experiments/current.yaml",
+                "internvl3_vqav2",
+                PipelineStage.INJECT,
+                repository_root=REPOSITORY_ROOT,
+                device="cuda:0",
+                resume_injection_from_run=4,
+            )
+
+        self.assertEqual(summary, {"ok": True})
+        self.assertEqual(run_injection.call_args.kwargs["resume_from_run"], 4)
 
 
 if __name__ == "__main__":

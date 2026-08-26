@@ -54,6 +54,25 @@ class FaultInjectorTest(unittest.TestCase):
         self.assertIsNone(injector.fault_hook_handle)
         self.assertIsNone(injector.step_hook_handle)
 
+    def test_lm_head_fault_precedes_step_counter(self):
+        model = _TinyModel()
+        injector = FaultInjector(model, mode="activation")
+        injector.set_inject_info(
+            idx=0,
+            module_name="lm_head",
+            inject_step=0,
+            bit_positions=[22],
+        )
+        injector.inject()
+        injector.register_step_hooks()
+
+        output = model(torch.tensor([[1.0, 2.0]]))
+
+        self.assertTrue(injector.select_target_has_injected)
+        self.assertNotEqual(output[0, 0].item(), 1.0)
+        self.assertEqual(injector.current_step, 1)
+        injector.unregister_hooks()
+
     def test_weight_fault_can_be_restored_exactly(self):
         model = _TinyModel()
         injector = FaultInjector(model, mode="weight")

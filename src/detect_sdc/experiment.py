@@ -249,7 +249,7 @@ def _validate_pipeline_job(job: Any) -> None:
         },
         f"{job.name}: mapping_training.kwargs",
     )
-    _validate_stage_suffixes(job)
+    _validate_stage_paths(job)
 
 
 def _validate_adapter(config: Mapping[str, Any], kind: str) -> None:
@@ -331,7 +331,6 @@ def _validate_training_values(
             )
     for key in (
         "scheduler_enabled",
-        "use_amp",
         "pin_memory",
         "persistent_workers",
     ):
@@ -346,20 +345,25 @@ def _validate_training_values(
     _integer(kwargs.get("seed"), f"{job_name}: mapping_training.seed")
 
 
-def _validate_stage_suffixes(job: Any) -> None:
-    expected = {
-        "profile_output": ".json",
-        "mapping_data": ".jsonl",
-        "mapping_model": ".pt",
-        "injected_output": ".jsonl",
-        "labeled_output": ".jsonl",
+def _validate_stage_paths(job: Any) -> None:
+    expected_names = {
+        "profile_output": "profile.json",
+        "mapping_data": "mapping.jsonl",
+        "injected_output": "injection.jsonl",
+        "labeled_output": "labels.jsonl",
     }
-    for name, suffix in expected.items():
+    for name, expected_name in expected_names.items():
         path = getattr(job.paths, name)
-        if path.suffix != suffix:
+        if path.name != expected_name:
             raise ValueError(
-                f"{job.name}: {name} must use {suffix}, got {path}"
+                f"{job.name}: {name} must use canonical filename "
+                f"{expected_name}, got {path}"
             )
+    if job.paths.mapping_model.suffix != ".pt":
+        raise ValueError(
+            f"{job.name}: mapping_model must use .pt, "
+            f"got {job.paths.mapping_model}"
+        )
 
 
 def _validate_unique_outputs(jobs: list[Any]) -> None:

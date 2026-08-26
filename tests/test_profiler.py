@@ -55,6 +55,42 @@ class _IdentityMapping(nn.Module):
 
 
 class ProfilerTest(unittest.TestCase):
+    def test_projection_observer_receives_raw_and_projected_features(self):
+        model = _TinyModel()
+        observations = []
+
+        def observe(raw, projected, layer_ids):
+            observations.append(
+                (raw.clone(), projected.clone(), layer_ids)
+            )
+
+        profiler = Profiler(
+            model,
+            proj_dim=2,
+            proj_method="project",
+            seed=42,
+            projection_observer=observe,
+        )
+        profiler.register()
+
+        values = torch.tensor([[[1.0, 2.0, 3.0, 4.0]]])
+        model(values)
+        model(values)
+        profiler.finalize()
+
+        self.assertEqual(len(observations), 1)
+        raw, projected, layer_ids = observations[0]
+        self.assertEqual(tuple(raw.shape), (2, 4))
+        self.assertEqual(tuple(projected.shape), (2, 2))
+        self.assertEqual(layer_ids, (0, 1))
+        self.assertTrue(
+            torch.allclose(
+                projected,
+                raw @ profiler.shared_proj_mat,
+            )
+        )
+        profiler.unregister()
+
     def test_active_mapping_and_telemetry_paths(self):
         model = _TinyModel()
         profiler = Profiler(model, proj_dim=2, proj_method="mean")

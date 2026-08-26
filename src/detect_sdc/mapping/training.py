@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import random
-from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -243,7 +242,6 @@ def evaluate_model(
     *,
     device: str,
     cosine_weight: float,
-    amp_enabled: bool,
 ) -> dict[str, float]:
     model.eval()
     totals = {"loss": 0.0, "mse": 0.0, "cos_loss": 0.0}
@@ -251,13 +249,12 @@ def evaluate_model(
     with torch.no_grad():
         for batch in data_loader:
             inputs, target, src_layer, tgt_layer = _move_batch(batch, device)
-            with _autocast(amp_enabled):
-                prediction = model(inputs, src_layer, tgt_layer)
-                loss, metrics = regression_loss(
-                    prediction,
-                    target,
-                    cosine_weight=cosine_weight,
-                )
+            prediction = model(inputs, src_layer, tgt_layer)
+            loss, metrics = regression_loss(
+                prediction,
+                target,
+                cosine_weight=cosine_weight,
+            )
             batch_size = inputs.size(0)
             totals["loss"] += loss.item() * batch_size
             totals["mse"] += metrics["mse"] * batch_size
@@ -278,7 +275,6 @@ def evaluate_final_split(
     *,
     device: str,
     split_name: str,
-    amp_enabled: bool,
 ) -> dict[str, float]:
     model.eval()
     total_mse = 0.0
@@ -290,8 +286,7 @@ def evaluate_final_split(
     with torch.no_grad():
         for batch in data_loader:
             inputs, target, src_layer, tgt_layer = _move_batch(batch, device)
-            with _autocast(amp_enabled):
-                prediction = model(inputs, src_layer, tgt_layer)
+            prediction = model(inputs, src_layer, tgt_layer)
             total_mse += (
                 torch.mean((prediction - target) ** 2, dim=-1)
                 .sum()
@@ -340,7 +335,7 @@ def train_model(
     lr: float = 5e-4,
     weight_decay: float = 1e-4,
     epochs: int = 500,
-    num_workers: int = 4,
+    num_workers: int = 8,
     split_strategy: str = "sequential",
     valid_ratio: float = 0.15,
     test_ratio: float = 0.1,
@@ -351,7 +346,6 @@ def train_model(
     scheduler_patience: int = 5,
     scheduler_factor: float = 0.5,
     min_lr: float = 1e-6,
-    use_amp: bool = True,
     pin_memory: bool = True,
     persistent_workers: bool = True,
     final_metrics: str = "detailed",
@@ -416,8 +410,6 @@ def train_model(
         if scheduler_enabled
         else None
     )
-    amp_enabled = use_amp and str(device).startswith("cuda")
-    scaler = _gradient_scaler() if amp_enabled else None
 
     best_loss = float("inf")
     best_state: dict[str, torch.Tensor] | None = None
@@ -427,17 +419,14 @@ def train_model(
             model,
             train_loader,
             optimizer,
-            scaler=scaler,
             device=device,
             cosine_weight=cosine_weight,
-            amp_enabled=amp_enabled,
         )
         selection_metrics = evaluate_model(
             model,
             selection_loader,
             device=device,
             cosine_weight=cosine_weight,
-            amp_enabled=amp_enabled,
         )
         if scheduler is not None:
             scheduler.step(selection_metrics["loss"])
@@ -472,7 +461,6 @@ def train_model(
             final_loader,
             device=device,
             cosine_weight=cosine_weight,
-            amp_enabled=amp_enabled,
         )
     else:
         metrics = evaluate_final_split(
@@ -480,7 +468,6 @@ def train_model(
             final_loader,
             device=device,
             split_name=splits.final_name,
-            amp_enabled=amp_enabled,
         )
     return model, metrics
 
@@ -490,10 +477,8 @@ def _train_epoch(
     data_loader: DataLoader,
     optimizer: torch.optim.Optimizer,
     *,
-    scaler: Any,
     device: str,
     cosine_weight: float,
-    amp_enabled: bool,
 ) -> float:
     model.train()
     loss_sum = 0.0
@@ -501,20 +486,14 @@ def _train_epoch(
     for batch in data_loader:
         inputs, target, src_layer, tgt_layer = _move_batch(batch, device)
         optimizer.zero_grad(set_to_none=True)
-        with _autocast(amp_enabled):
-            prediction = model(inputs, src_layer, tgt_layer)
-            loss, _ = regression_loss(
-                prediction,
-                target,
-                cosine_weight=cosine_weight,
-            )
-        if scaler is None:
-            loss.backward()
-            optimizer.step()
-        else:
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+        prediction = model(inputs, src_layer, tgt_layer)
+        loss, _ = regression_loss(
+            prediction,
+            target,
+            cosine_weight=cosine_weight,
+        )
+        loss.backward()
+        optimizer.step()
         loss_sum += loss.item() * inputs.size(0)
         count += inputs.size(0)
     return loss_sum / max(count, 1)
@@ -530,22 +509,6 @@ def _move_batch(
         batch["src_layer"].to(device, non_blocking=True),
         batch["tgt_layer"].to(device, non_blocking=True),
     )
-
-
-def _autocast(enabled: bool):
-    if not enabled:
-        return nullcontext()
-    if hasattr(torch, "amp") and hasattr(torch.amp, "autocast"):
-        return torch.amp.autocast(device_type="cuda", enabled=True)
-    legacy_autocast = getattr(torch.cuda.amp, "autocast")
-    return legacy_autocast(enabled=True)
-
-
-def _gradient_scaler():
-    if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler"):
-        return torch.amp.GradScaler("cuda", enabled=True)
-    legacy_scaler = getattr(torch.cuda.amp, "GradScaler")
-    return legacy_scaler(enabled=True)
 
 
 def _validate_split_sizes(

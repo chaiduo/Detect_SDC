@@ -25,11 +25,8 @@ CSV 中的 canonical 列名是 `significant_sdc_target`。兼容逻辑支持：
 - 二分类旧标签：`label == 1 and significance == 2` 为正类。
 - 已存在的 target 必须与旧标签推导结果一致，否则报错。
 
-Qwen2.5-VL 与 LLaVA 使用同一实现：
-`src/detect_sdc/detector/xgboost.py`。模型级差异只保留学习率：
-
-- Qwen2.5-VL: `0.02`
-- LLaVA 1.5: `0.01`
+Qwen2.5-VL、LLaVA 1.5 与 InternVL3 使用同一实现：
+`src/detect_sdc/detector/xgboost.py`，学习率统一为 `0.01`。
 
 ## 2. 特征
 

@@ -1,0 +1,83 @@
+{
+  "feature_columns": [
+    "cos_sim_mean_p6_7",
+    "cos_sim_mean_p22_23",
+    "cos_sim_mean_p23_24",
+    "cos_sim_mean_p24_25",
+    "cos_sim_mean_p25_26",
+    "cos_sim_mean_p26_27"
+  ],
+  "training": {
+    "train_distribution": {
+      "total": 8464,
+      "counts": {
+        "0": 7600,
+        "1": 864
+      },
+      "rates": {
+        "0": 0.8979206049149339,
+        "1": 0.10207939508506617
+      }
+    },
+    "test_distribution": {
+      "total": 1527,
+      "counts": {
+        "0": 1369,
+        "1": 158
+      },
+      "rates": {
+        "0": 0.8965291421087099,
+        "1": 0.10347085789129011
+      }
+    },
+    "class_weights": {
+      "0": 0.5568421052631579,
+      "1": 4.898148148148148
+    },
+    "best_iteration": 488,
+    "best_score": 0.01440733464309103,
+    "parameters": {
+      "learning_rate": 0.01,
+      "n_estimators": 10000,
+      "max_depth": 6,
+      "min_child_weight": 1.0,
+      "subsample": 0.9,
+      "colsample_bytree": 0.9,
+      "early_stopping_rounds": 500,
+      "test_ratio": 0.15,
+      "random_state": 42,
+      "n_jobs": 8,
+      "device": "cpu",
+      "verbose": false
+    }
+  },
+  "valid_metrics": {
+    "name": "significant_sdc",
+    "support": 61,
+    "pred_total": 46,
+    "tp": 43,
+    "fp": 3,
+    "fn": 18,
+    "tn": 1557,
+    "precision": 0.9347826086956522,
+    "recall": 0.7049180327868853,
+    "f1": 0.8037383177570093,
+    "prob_mean": 0.06148652359843254
+  },
+  "config": {
+    "learning_rate": 0.01,
+    "n_estimators": 10000,
+    "max_depth": 6,
+    "min_child_weight": 1.0,
+    "subsample": 0.9,
+    "colsample_bytree": 0.9,
+    "early_stopping_rounds": 500,
+    "test_ratio": 0.15,
+    "random_state": 42,
+    "n_jobs": 8,
+    "device": "cpu",
+    "verbose": 200
+  },
+  "feature_profile": "cos_sim_mean",
+  "inference_tree_count": 489
+}

@@ -100,7 +100,7 @@ mapping_training:
     lr: 0.0005
     weight_decay: 0.0001
     epochs: 500
-    num_workers: 4
+    num_workers: 8
     split_strategy: sequential
     valid_ratio: 0.15
     test_ratio: 0.1
@@ -111,7 +111,6 @@ mapping_training:
     scheduler_patience: 5
     scheduler_factor: 0.5
     min_lr: 0.000001
-    use_amp: true
     pin_memory: true
     persistent_workers: true
     final_metrics: detailed
@@ -136,7 +135,6 @@ mapping_training:
 - `scheduler_patience`: Number of non-improving epochs before reducing LR.
 - `scheduler_factor`: LR reduction factor.
 - `min_lr`: Lower bound for scheduler LR.
-- `use_amp`: Enable CUDA AMP during mapping training.
 - `pin_memory`: Enable pinned host memory for DataLoader.
 - `persistent_workers`: Keep DataLoader workers alive across epochs when
   `num_workers > 0`.
@@ -156,7 +154,7 @@ injection:
     hidden_dim: 64
     num_blocks: 4
     dropout: 0.1
-  fault_runs: 8
+  fault_runs: 10
   retain_all_fault_runs: 1
   num_bits: 2
   seed: 42

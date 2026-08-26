@@ -30,6 +30,7 @@ class FeatureSpec:
     distance_pairs: tuple[LayerPair, ...]
     last_k_steps: int = 50
     finite_only: bool = True
+    step_window: str = "suffix"
 
     def __post_init__(self) -> None:
         if not self.selected_layer_pairs:
@@ -38,6 +39,8 @@ class FeatureSpec:
             raise ValueError("distance_pairs must not be empty")
         if self.last_k_steps <= 0:
             raise ValueError("last_k_steps must be positive")
+        if self.step_window not in {"prefix", "suffix"}:
+            raise ValueError("step_window must be 'prefix' or 'suffix'")
 
         for name, pairs in (
             ("selected_layer_pairs", self.selected_layer_pairs),
@@ -135,7 +138,10 @@ def extract_feature_row(
     all_steps = sorted(step_pair_map)
     if not all_steps:
         raise SampleSkipped("missing_telemetry")
-    window_steps = all_steps[-spec.last_k_steps :]
+    if spec.step_window == "prefix":
+        window_steps = all_steps[: spec.last_k_steps]
+    else:
+        window_steps = all_steps[-spec.last_k_steps :]
 
     features: dict[str, float] = {}
     for pair in spec.selected_layer_pairs:

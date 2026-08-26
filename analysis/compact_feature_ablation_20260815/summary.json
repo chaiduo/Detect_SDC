@@ -1,0 +1,23 @@
+{
+  "models": [
+    "Qwen2.5-VL-7B",
+    "InternVL3-8B",
+    "LLaVA-1.5-7B"
+  ],
+  "datasets": [
+    "EarthVQA",
+    "LingoQA",
+    "VQAv2"
+  ],
+  "configuration_count": 12,
+  "detector_count": 108,
+  "features_per_configuration": 6,
+  "full_feature_count": 72,
+  "full_mean_f1_percent": 87.9319436501639,
+  "best_configuration": "l2_distance_mean",
+  "best_mean_f1_percent": 87.34286637043347,
+  "best_mean_delta_f1_pp": -0.5890772797304249,
+  "best_worst_delta_f1_pp": -4.07894736842106,
+  "best_meets_average_loss_at_most_1pp": true,
+  "best_meets_every_case_loss_at_most_2pp": false
+}

@@ -1,0 +1,63 @@
+{
+  "model": "InternVL3-8B",
+  "model_key": "internvl3",
+  "gpu_physical_id": "6",
+  "feature_counts": {
+    "full_72d": 72,
+    "cos_sim_mean_6d": 6
+  },
+  "detector_max_depth": 6,
+  "orders": {
+    "forward": [
+      "baseline",
+      "full_72d",
+      "cos_sim_mean_6d"
+    ],
+    "reverse": [
+      "cos_sim_mean_6d",
+      "full_72d",
+      "baseline"
+    ]
+  },
+  "samples": 50,
+  "repeats_per_order": 2,
+  "bootstrap_replicates": 10000,
+  "metrics": {
+    "baseline": {
+      "observations": 200,
+      "latency_mean_ms": 678.7571801547892,
+      "latency_p50_ms": 656.5387670416385,
+      "latency_p95_ms": 905.5127882864323,
+      "latency_overhead_vs_baseline_percent": 0.0,
+      "tokens_per_second": 29.583480789729244,
+      "throughput_change_vs_baseline_percent": 0.0
+    },
+    "full_72d": {
+      "observations": 200,
+      "latency_mean_ms": 695.7026659371331,
+      "latency_p50_ms": 671.8008870957419,
+      "latency_p95_ms": 929.481408547144,
+      "latency_overhead_vs_baseline_percent": 2.496546081248008,
+      "tokens_per_second": 28.8629050644094,
+      "throughput_change_vs_baseline_percent": -2.435736789870957,
+      "overhead_ci95_low_percent": 2.210007190636854,
+      "overhead_ci95_high_percent": 2.811697873915844
+    },
+    "cos_sim_mean_6d": {
+      "observations": 200,
+      "latency_mean_ms": 695.6446768762544,
+      "latency_p50_ms": 668.9435305306688,
+      "latency_p95_ms": 918.2704898063092,
+      "latency_overhead_vs_baseline_percent": 2.4880026635760943,
+      "tokens_per_second": 28.865311081179964,
+      "throughput_change_vs_baseline_percent": -2.427603815973589,
+      "overhead_ci95_low_percent": 2.221759381073292,
+      "overhead_ci95_high_percent": 2.7568057282694918
+    },
+    "direct_6d_vs_72d": {
+      "latency_change_percent": -0.008335322504571252,
+      "ci95_low_percent": -0.3390990996174187,
+      "ci95_high_percent": 0.31006525083033865
+    }
+  }
+}

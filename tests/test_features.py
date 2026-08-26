@@ -47,6 +47,40 @@ class FeatureExtractionTest(unittest.TestCase):
         self.assertEqual(row["significant_sdc_target"], 1)
         self.assertFalse(math.isnan(row["l2_distance_mean_p1_2"]))
 
+    def test_extracts_prefix_steps_for_online_detection(self):
+        sample = _sample()
+        sample["mean_std_cos"]["records"] = [
+            _record(1, cos_sim=1.0),
+            _record(2, cos_sim=2.0),
+            _record(3, cos_sim=100.0),
+        ]
+        spec = FeatureSpec(
+            selected_layer_pairs=((1, 2),),
+            distance_pairs=((1, 2),),
+            last_k_steps=2,
+            finite_only=True,
+            step_window="prefix",
+        )
+
+        row = extract_feature_row(
+            sample,
+            spec=spec,
+            uid_namespace="model_dataset",
+        )
+
+        self.assertEqual(row["num_steps_used"], 2)
+        self.assertEqual(row["cos_sim_mean_p1_2"], 1.5)
+        self.assertEqual(row["cos_sim_max_p1_2"], 2.0)
+        self.assertEqual(row["cos_sim_min_p1_2"], 1.0)
+
+    def test_rejects_unknown_step_window(self):
+        with self.assertRaisesRegex(ValueError, "step_window"):
+            FeatureSpec(
+                selected_layer_pairs=((1, 2),),
+                distance_pairs=((1, 2),),
+                step_window="middle",
+            )
+
     def test_sample_uid_depends_on_stable_fields_not_mapping_order(self):
         first = _sample()
         first["fault"] = {"module": "layer.1", "idx": 5, "bit_positions": [2, 7]}

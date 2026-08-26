@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from detect_sdc.labeling import (
+    _encode_chat_batch,
     extract_score,
     label_jsonl,
     label_records,
@@ -22,7 +23,36 @@ class _FakeJudge:
         return scores, [f"Feedback [RESULT] {score}" for score in scores]
 
 
+class _FakeTokenizer:
+    def __init__(self):
+        self.conversations = []
+        self.rendered = []
+
+    def apply_chat_template(self, conversation, *, tokenize, add_generation_prompt):
+        self.conversations.append(conversation)
+        if not isinstance(conversation[0], dict):
+            raise TypeError("Expected one conversation, not a batch")
+        return f"rendered-{len(self.conversations)}"
+
+    def __call__(self, rendered, **kwargs):
+        self.rendered = rendered
+        return {"input_ids": rendered, "attention_mask": rendered}
+
+
 class PrometheusLabelingTest(unittest.TestCase):
+    def test_chat_template_is_rendered_per_conversation_before_batch_tokenization(self):
+        tokenizer = _FakeTokenizer()
+        messages = [
+            [{"role": "user", "content": "first"}],
+            [{"role": "user", "content": "second"}],
+        ]
+
+        encoded = _encode_chat_batch(tokenizer, messages, max_length=128)
+
+        self.assertEqual(tokenizer.conversations, messages)
+        self.assertEqual(tokenizer.rendered, ["rendered-1", "rendered-2"])
+        self.assertEqual(encoded["input_ids"], tokenizer.rendered)
+
     def test_strict_result_parsing(self):
         self.assertEqual(extract_score("Feedback [RESULT] 2"), 2)
         self.assertEqual(extract_score("Feedback 2"), -1)

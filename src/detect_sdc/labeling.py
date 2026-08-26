@@ -110,13 +110,10 @@ class PrometheusJudge:
             ]
             for prompt in prompts
         ]
-        encoded = self._tokenizer.apply_chat_template(
+        encoded = _encode_chat_batch(
+            self._tokenizer,
             messages,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
             max_length=4096,
-            return_dict=True,
         )
         model_inputs = {
             key: value.to(self.device) for key, value in encoded.items()
@@ -145,6 +142,29 @@ class PrometheusJudge:
                 torch.cuda.empty_cache()
         except ImportError:
             pass
+
+
+def _encode_chat_batch(
+    tokenizer: Any,
+    messages: Sequence[Sequence[Mapping[str, str]]],
+    *,
+    max_length: int,
+) -> Mapping[str, Any]:
+    rendered = [
+        tokenizer.apply_chat_template(
+            conversation,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+        for conversation in messages
+    ]
+    return tokenizer(
+        rendered,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=max_length,
+    )
 
 
 def extract_score(text: str) -> int:

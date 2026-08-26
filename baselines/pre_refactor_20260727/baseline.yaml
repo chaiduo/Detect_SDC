@@ -28,7 +28,7 @@ environment:
     PyYAML: 6.0.3
 spec:
   path: /data01/cd_workspace/Detect_SDC/configs/baseline.yaml
-  sha256: 2832fc371c43af06dda587575a30748b8d7d543f1fd1537693964e540ac79945
+  sha256: 20eea024dc0c01fac323eccb2b7c9e71c7e0b2658f32804b4d5477a3565fe47d
 experiments:
 - name: qwen25_vl_earthvqa
   model: qwen25_vl
@@ -36,7 +36,7 @@ experiments:
   files:
     labeled_jsonl:
       role: labeled_jsonl
-      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project_labeled.jsonl
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/EarthVQA/json/labels.jsonl
       exists: true
       size_bytes: 7327142750
       mtime_ns: 1784816039135555937
@@ -721,7 +721,7 @@ experiments:
   files:
     labeled_jsonl:
       role: labeled_jsonl
-      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/json/detect_LingoQA_Qwen_with_sem_labeled.jsonl
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/LingoQA/json/labels.jsonl
       exists: true
       size_bytes: 4019237221
       mtime_ns: 1784821920135073700
@@ -1406,7 +1406,7 @@ experiments:
   files:
     labeled_jsonl:
       role: labeled_jsonl
-      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/json/detect_VQAv2_Qwen_with_sem_project_labeled.jsonl
+      path: /data01/cd_workspace/Detect_SDC/Qwen2.5-VL-7B/VQAv2/json/labels.jsonl
       exists: true
       size_bytes: 3241013340
       mtime_ns: 1784821789367038315
@@ -2091,7 +2091,7 @@ experiments:
   files:
     labeled_jsonl:
       role: labeled_jsonl
-      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/json/detect_EarthVQA_llava_with_sem_project_labeled.jsonl
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/EarthVQA/json/labels.jsonl
       exists: true
       size_bytes: 946801921
       mtime_ns: 1784819729631678414
@@ -2775,7 +2775,7 @@ experiments:
   files:
     labeled_jsonl:
       role: labeled_jsonl
-      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/json/detect_LingoQA_llava_with_sem_labeled2.jsonl
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/LingoQA/json/labels.jsonl
       exists: true
       size_bytes: 1822547523
       mtime_ns: 1781679647754879755
@@ -3465,7 +3465,7 @@ experiments:
   files:
     labeled_jsonl:
       role: labeled_jsonl
-      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/VQAv2/json/detect_VQAv2_llava_with_sem_project_labeled.jsonl
+      path: /data01/cd_workspace/Detect_SDC/llava-v1.5-7B/VQAv2/json/labels.jsonl
       exists: true
       size_bytes: 24142514
       mtime_ns: 1784640727291422417

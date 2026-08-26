@@ -160,6 +160,9 @@ ModelAdapter, DatasetAdapter, Profiler, and FaultInjector. Both stages stream to
 temporary JSONL files and atomically publish successful outputs. The inject
 stage loads each 7B model once for its clean run and all configured fault runs.
 
+Every model/dataset artifact directory uses the same stage filenames under
+`json/`: `profile.json`, `mapping.jsonl`, `injection.jsonl`, and `labels.jsonl`.
+
 Mapping-model architecture, profiler projection, fault run count, retained
 full runs, bit count, and random seed are explicit model/job configuration.
 Mapping-model training is also a package stage and atomically publishes its

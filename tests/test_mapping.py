@@ -153,7 +153,6 @@ class MappingTrainingTest(unittest.TestCase):
                 test_ratio=0.1,
                 test_ratio_in_train=0.2,
                 scheduler_enabled=False,
-                use_amp=False,
                 pin_memory=False,
                 persistent_workers=False,
                 device="cpu",

@@ -39,24 +39,24 @@ execution:
       model: qwen25_vl
       dataset: earthvqa
       injection:
-        fault_runs: 16
-      profile_output: Qwen2.5-VL-7B/EarthVQA/json/Golden_EarthVQA_Qwen2.5-VL-7B_30_CA.json
-      mapping_data: Qwen2.5-VL-7B/EarthVQA/json/attn_proj_mapping_64_project.jsonl
+        fault_runs: 10
+      profile_output: Qwen2.5-VL-7B/EarthVQA/json/profile.json
+      mapping_data: Qwen2.5-VL-7B/EarthVQA/json/mapping.jsonl
       mapping_model: Qwen2.5-VL-7B/EarthVQA/model/best_mapping_model.pt
-      injected_output: Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project.jsonl
-      labeled_output: Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project_labeled.jsonl
+      injected_output: Qwen2.5-VL-7B/EarthVQA/json/injection.jsonl
+      labeled_output: Qwen2.5-VL-7B/EarthVQA/json/labels.jsonl
     qwen25_vl_lingoqa:
       model: qwen25_vl
       dataset: lingoqa
       instrumentation:
-        projection_method: max
+        projection_method: project
       injection:
         retain_all_fault_runs: 2
-      profile_output: Qwen2.5-VL-7B/LingoQA/json/Golden_LingoQA_Qwen2.5-VL-7B.json
-      mapping_data: Qwen2.5-VL-7B/LingoQA/json/attn_proj_interlayer.jsonl
+      profile_output: Qwen2.5-VL-7B/LingoQA/json/profile.json
+      mapping_data: Qwen2.5-VL-7B/LingoQA/json/mapping.jsonl
       mapping_model: Qwen2.5-VL-7B/LingoQA/model/lingoqa_mapping_model.pt
-      injected_output: Qwen2.5-VL-7B/LingoQA/json/detect_LingoQA_Qwen_with_sem.jsonl
-      labeled_output: Qwen2.5-VL-7B/LingoQA/json/detect_LingoQA_Qwen_with_sem_labeled.jsonl
+      injected_output: Qwen2.5-VL-7B/LingoQA/json/injection.jsonl
+      labeled_output: Qwen2.5-VL-7B/LingoQA/json/labels.jsonl
     qwen25_vl_vqav2:
       model: qwen25_vl
       dataset: vqav2
@@ -68,24 +68,24 @@ execution:
           test_ratio: 0.1
           early_stop_patience: 15
           cosine_weight: 0.1
-      profile_output: Qwen2.5-VL-7B/VQAv2/json/Golden_VQAv2_Qwen2.5-VL-7B_30_new.json
-      mapping_data: Qwen2.5-VL-7B/VQAv2/json/attn_proj_mapping_64_project.jsonl
+      profile_output: Qwen2.5-VL-7B/VQAv2/json/profile.json
+      mapping_data: Qwen2.5-VL-7B/VQAv2/json/mapping.jsonl
       mapping_model: Qwen2.5-VL-7B/VQAv2/model/best_mapping_model.pt
-      injected_output: Qwen2.5-VL-7B/VQAv2/json/detect_VQAv2_Qwen_with_sem_project.jsonl
-      labeled_output: Qwen2.5-VL-7B/VQAv2/json/detect_VQAv2_Qwen_with_sem_project_labeled.jsonl
+      injected_output: Qwen2.5-VL-7B/VQAv2/json/injection.jsonl
+      labeled_output: Qwen2.5-VL-7B/VQAv2/json/labels.jsonl
     llava15_earthvqa:
       model: llava15
       dataset: earthvqa
-      profile_output: llava-v1.5-7B/EarthVQA/json/Golden_EarthVQA_llava-v1.5-7B.json
-      mapping_data: llava-v1.5-7B/EarthVQA/json/attn_proj_mapping_64_project.jsonl
+      profile_output: llava-v1.5-7B/EarthVQA/json/profile.json
+      mapping_data: llava-v1.5-7B/EarthVQA/json/mapping.jsonl
       mapping_model: llava-v1.5-7B/EarthVQA/model/best_mapping_model.pt
-      injected_output: llava-v1.5-7B/EarthVQA/json/detect_EarthVQA_llava_with_sem_project.jsonl
-      labeled_output: llava-v1.5-7B/EarthVQA/json/detect_EarthVQA_llava_with_sem_project_labeled.jsonl
+      injected_output: llava-v1.5-7B/EarthVQA/json/injection.jsonl
+      labeled_output: llava-v1.5-7B/EarthVQA/json/labels.jsonl
     llava15_lingoqa:
       model: llava15
       dataset: lingoqa
       instrumentation:
-        projection_method: max
+        projection_method: project
         seed: 1234
       mapping_training:
         kwargs:
@@ -105,41 +105,41 @@ execution:
           hidden_dim: 1024
           num_blocks: 8
           dropout: 0.1
-      profile_output: llava-v1.5-7B/LingoQA/json/Golden_LingoQA_llava-v1.5-7B.json
-      mapping_data: llava-v1.5-7B/LingoQA/json/attn_proj_interlayer.jsonl
+      profile_output: llava-v1.5-7B/LingoQA/json/profile.json
+      mapping_data: llava-v1.5-7B/LingoQA/json/mapping.jsonl
       mapping_model: llava-v1.5-7B/LingoQA/model/lingoqa_mapping_model.pt
-      injected_output: llava-v1.5-7B/LingoQA/json/detect_LingoQA_llava_with_sem.jsonl
-      labeled_output: llava-v1.5-7B/LingoQA/json/detect_LingoQA_llava_with_sem_labeled2.jsonl
+      injected_output: llava-v1.5-7B/LingoQA/json/injection.jsonl
+      labeled_output: llava-v1.5-7B/LingoQA/json/labels.jsonl
     llava15_vqav2:
       model: llava15
       dataset: vqav2
-      profile_output: llava-v1.5-7B/VQAv2/json/Golden_VQAv2_llava-v1.5-7B.json
-      mapping_data: llava-v1.5-7B/VQAv2/json/attn_proj_mapping_64_project.jsonl
+      profile_output: llava-v1.5-7B/VQAv2/json/profile.json
+      mapping_data: llava-v1.5-7B/VQAv2/json/mapping.jsonl
       mapping_model: llava-v1.5-7B/VQAv2/model/best_mapping_model.pt
-      injected_output: llava-v1.5-7B/VQAv2/json/detect_VQAv2_llava_with_sem_project.jsonl
-      labeled_output: llava-v1.5-7B/VQAv2/json/detect_VQAv2_llava_with_sem_project_labeled.jsonl
+      injected_output: llava-v1.5-7B/VQAv2/json/injection.jsonl
+      labeled_output: llava-v1.5-7B/VQAv2/json/labels.jsonl
     internvl3_earthvqa:
       model: internvl3
       dataset: earthvqa
       injection:
-        fault_runs: 16
-      profile_output: InternVL3-8B/EarthVQA/json/Golden_EarthVQA_InternVL3-8B.json
-      mapping_data: InternVL3-8B/EarthVQA/json/attn_proj_mapping_64_project.jsonl
+        fault_runs: 10
+      profile_output: InternVL3-8B/EarthVQA/json/profile.json
+      mapping_data: InternVL3-8B/EarthVQA/json/mapping.jsonl
       mapping_model: InternVL3-8B/EarthVQA/model/best_mapping_model.pt
-      injected_output: InternVL3-8B/EarthVQA/json/detect_EarthVQA_InternVL3_with_sem_project.jsonl
-      labeled_output: InternVL3-8B/EarthVQA/json/detect_EarthVQA_InternVL3_with_sem_project_labeled.jsonl
+      injected_output: InternVL3-8B/EarthVQA/json/injection.jsonl
+      labeled_output: InternVL3-8B/EarthVQA/json/labels.jsonl
     internvl3_lingoqa:
       model: internvl3
       dataset: lingoqa
       instrumentation:
-        projection_method: max
+        projection_method: project
       injection:
         retain_all_fault_runs: 2
-      profile_output: InternVL3-8B/LingoQA/json/Golden_LingoQA_InternVL3-8B.json
-      mapping_data: InternVL3-8B/LingoQA/json/attn_proj_interlayer.jsonl
+      profile_output: InternVL3-8B/LingoQA/json/profile.json
+      mapping_data: InternVL3-8B/LingoQA/json/mapping.jsonl
       mapping_model: InternVL3-8B/LingoQA/model/lingoqa_mapping_model.pt
-      injected_output: InternVL3-8B/LingoQA/json/detect_LingoQA_InternVL3_with_sem.jsonl
-      labeled_output: InternVL3-8B/LingoQA/json/detect_LingoQA_InternVL3_with_sem_labeled.jsonl
+      injected_output: InternVL3-8B/LingoQA/json/injection.jsonl
+      labeled_output: InternVL3-8B/LingoQA/json/labels.jsonl
     internvl3_vqav2:
       model: internvl3
       dataset: vqav2
@@ -151,11 +151,11 @@ execution:
           test_ratio: 0.1
           early_stop_patience: 15
           cosine_weight: 0.1
-      profile_output: InternVL3-8B/VQAv2/json/Golden_VQAv2_InternVL3-8B.json
-      mapping_data: InternVL3-8B/VQAv2/json/attn_proj_mapping_64_project.jsonl
+      profile_output: InternVL3-8B/VQAv2/json/profile.json
+      mapping_data: InternVL3-8B/VQAv2/json/mapping.jsonl
       mapping_model: InternVL3-8B/VQAv2/model/best_mapping_model.pt
-      injected_output: InternVL3-8B/VQAv2/json/detect_VQAv2_InternVL3_with_sem_project.jsonl
-      labeled_output: InternVL3-8B/VQAv2/json/detect_VQAv2_InternVL3_with_sem_project_labeled.jsonl
+      injected_output: InternVL3-8B/VQAv2/json/injection.jsonl
+      labeled_output: InternVL3-8B/VQAv2/json/labels.jsonl
 
 labeling:
   model_path: /data01/cd_workspace/llm/prometheus-7b-v2.0
@@ -189,55 +189,55 @@ featurization:
     qwen25_vl_earthvqa:
       model: qwen25_vl
       dataset: earthvqa
-      input: Qwen2.5-VL-7B/EarthVQA/json/detect_EarthVQA_Qwen_with_sem_project_labeled.jsonl
+      input: Qwen2.5-VL-7B/EarthVQA/json/labels.jsonl
       train_output: Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_train_set.csv
       valid_output: Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_valid_set.csv
     qwen25_vl_lingoqa:
       model: qwen25_vl
       dataset: lingoqa
-      input: Qwen2.5-VL-7B/LingoQA/json/detect_LingoQA_Qwen_with_sem_labeled.jsonl
+      input: Qwen2.5-VL-7B/LingoQA/json/labels.jsonl
       train_output: Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_train_set.csv
       valid_output: Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_valid_set.csv
     qwen25_vl_vqav2:
       model: qwen25_vl
       dataset: vqav2
-      input: Qwen2.5-VL-7B/VQAv2/json/detect_VQAv2_Qwen_with_sem_project_labeled.jsonl
+      input: Qwen2.5-VL-7B/VQAv2/json/labels.jsonl
       train_output: Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_train_set.csv
       valid_output: Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_valid_set.csv
     llava15_earthvqa:
       model: llava15
       dataset: earthvqa
-      input: llava-v1.5-7B/EarthVQA/json/detect_EarthVQA_llava_with_sem_project_labeled.jsonl
+      input: llava-v1.5-7B/EarthVQA/json/labels.jsonl
       train_output: llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_train_set.csv
       valid_output: llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_valid_set.csv
     llava15_lingoqa:
       model: llava15
       dataset: lingoqa
-      input: llava-v1.5-7B/LingoQA/json/detect_LingoQA_llava_with_sem_labeled2.jsonl
+      input: llava-v1.5-7B/LingoQA/json/labels.jsonl
       train_output: llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_train_set.csv
       valid_output: llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_valid_set.csv
     llava15_vqav2:
       model: llava15
       dataset: vqav2
-      input: llava-v1.5-7B/VQAv2/json/detect_VQAv2_llava_with_sem_project_labeled.jsonl
+      input: llava-v1.5-7B/VQAv2/json/labels.jsonl
       train_output: llava-v1.5-7B/VQAv2/train_data/llava-v1.5-7B_train_set.csv
       valid_output: llava-v1.5-7B/VQAv2/train_data/llava-v1.5-7B_valid_set.csv
     internvl3_earthvqa:
       model: internvl3
       dataset: earthvqa
-      input: InternVL3-8B/EarthVQA/json/detect_EarthVQA_InternVL3_with_sem_project_labeled.jsonl
+      input: InternVL3-8B/EarthVQA/json/labels.jsonl
       train_output: InternVL3-8B/EarthVQA/train_data/InternVL3_EarthVQA_train_set.csv
       valid_output: InternVL3-8B/EarthVQA/train_data/InternVL3_EarthVQA_valid_set.csv
     internvl3_lingoqa:
       model: internvl3
       dataset: lingoqa
-      input: InternVL3-8B/LingoQA/json/detect_LingoQA_InternVL3_with_sem_labeled.jsonl
+      input: InternVL3-8B/LingoQA/json/labels.jsonl
       train_output: InternVL3-8B/LingoQA/train_data/InternVL3_LingoQA_train_set.csv
       valid_output: InternVL3-8B/LingoQA/train_data/InternVL3_LingoQA_valid_set.csv
     internvl3_vqav2:
       model: internvl3
       dataset: vqav2
-      input: InternVL3-8B/VQAv2/json/detect_VQAv2_InternVL3_with_sem_project_labeled.jsonl
+      input: InternVL3-8B/VQAv2/json/labels.jsonl
       train_output: InternVL3-8B/VQAv2/train_data/InternVL3_VQAv2_train_set.csv
       valid_output: InternVL3-8B/VQAv2/train_data/InternVL3_VQAv2_valid_set.csv
 
@@ -262,11 +262,11 @@ detector:
       verbose: 200
     by_model:
       qwen25_vl:
-        learning_rate: 0.02
+        learning_rate: 0.01
       llava15:
         learning_rate: 0.01
       internvl3:
-        learning_rate: 0.02
+        learning_rate: 0.01
 
 artifacts:
   root: artifacts

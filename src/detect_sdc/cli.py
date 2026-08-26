@@ -144,6 +144,12 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--max-samples", type=int, default=None)
     run_parser.add_argument("--batch-size", type=int, default=64)
     run_parser.add_argument("--overwrite", action="store_true")
+    run_parser.add_argument(
+        "--resume-injection-from-run",
+        type=int,
+        default=None,
+        help="Resume an interrupted inject stage from this fault run",
+    )
     run_parser.add_argument("--dry-run", action="store_true")
 
     return parser
@@ -230,6 +236,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 max_samples=args.max_samples,
                 batch_size=args.batch_size,
                 overwrite=args.overwrite,
+                resume_injection_from_run=args.resume_injection_from_run,
                 dry_run=args.dry_run,
             )
         return 0

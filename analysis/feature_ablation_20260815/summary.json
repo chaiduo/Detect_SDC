@@ -1,0 +1,35 @@
+{
+  "models": [
+    "Qwen2.5-VL-7B",
+    "InternVL3-8B",
+    "LLaVA-1.5-7B"
+  ],
+  "datasets": [
+    "EarthVQA",
+    "LingoQA",
+    "VQAv2"
+  ],
+  "feature_groups": [
+    "cos_sim",
+    "mean_diff",
+    "std_diff",
+    "l2_distance"
+  ],
+  "features_per_group": 18,
+  "full_feature_count": 72,
+  "evaluation_cohort": "fixed_full_non_all_nan",
+  "result_rows": 81,
+  "full_mean_f1_percent": 87.9319436501639,
+  "leave_one_out_mean_f1_percent": {
+    "without_cos_sim": 87.0162676491704,
+    "without_mean_diff": 87.27748012937346,
+    "without_std_diff": 87.65111708243555,
+    "without_l2_distance": 87.65209807242472
+  },
+  "single_group_mean_f1_percent": {
+    "only_cos_sim": 86.2121771606669,
+    "only_mean_diff": 86.26255526908744,
+    "only_std_diff": 87.00437654861608,
+    "only_l2_distance": 86.83348415361388
+  }
+}

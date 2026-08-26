@@ -1,10 +1,16 @@
 import json
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
 from typing import Optional
 
 import torch
 import torch.nn.functional as F
+
+ProjectionObserver = Callable[
+    [torch.Tensor, torch.Tensor, tuple[int, ...]],
+    None,
+]
 
 
 class Profiler:
@@ -12,8 +18,9 @@ class Profiler:
         self,
         model,
         proj_dim: Optional[int] = None,
-        proj_method: str = "max",
+        proj_method: str = "project",
         seed: int = 42,
+        projection_observer: Optional[ProjectionObserver] = None,
     ):
         self.model = model
 
@@ -32,6 +39,7 @@ class Profiler:
         self.proj_dim = proj_dim
         self.proj_method = proj_method  # "max", "min", "mean", "project"
         self.seed = seed
+        self.projection_observer = projection_observer
 
         # 投影矩阵（仅当 proj_method="project" 时使用）
         self.shared_proj_mat = None
@@ -350,6 +358,13 @@ class Profiler:
 
         # 批量降维 [L, D] -> [L, K]
         y = self._reduce_dimension(x, self.proj_dim)
+
+        if self.projection_observer is not None:
+            self.projection_observer(
+                x.detach(),
+                y.detach(),
+                tuple(layer_ids),
+            )
 
         # 存回 CPU
         y_cpu = y.detach().float().cpu()

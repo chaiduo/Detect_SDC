@@ -67,6 +67,26 @@ class ExperimentConfigTest(unittest.TestCase):
                     repository_root=REPOSITORY_ROOT,
                 )
 
+    def test_validation_rejects_noncanonical_stage_filename(self):
+        config = load_yaml(
+            REPOSITORY_ROOT / "configs/experiments/current.yaml"
+        )
+        config = copy.deepcopy(config)
+        config["execution"]["jobs"]["qwen25_vl_earthvqa"][
+            "profile_output"
+        ] = "Qwen2.5-VL-7B/EarthVQA/json/custom.json"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "invalid.yaml"
+            atomic_write_yaml(path, config)
+            with self.assertRaisesRegex(
+                ValueError,
+                "canonical filename profile.json",
+            ):
+                validate_experiment_configuration(
+                    path,
+                    repository_root=REPOSITORY_ROOT,
+                )
+
     def test_validation_rejects_mapping_dimension_mismatch(self):
         config = load_yaml(
             REPOSITORY_ROOT / "configs/experiments/current.yaml"

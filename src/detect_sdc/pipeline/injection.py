@@ -59,6 +59,13 @@ def load_clean_answers(path: str | Path) -> CleanAnswerIndex:
     return CleanAnswerIndex(by_sequence, by_orig_id)
 
 
+@dataclass(frozen=True)
+class _InjectionResumeState:
+    start_run_index: int
+    rows_written: int
+    significant_rows: int
+
+
 def run_injection_samples(
     model_adapter: ModelAdapter,
     dataset_adapter: DatasetAdapter,
@@ -77,6 +84,7 @@ def run_injection_samples(
     num_bits: int,
     fault_seed: int,
     overwrite: bool = False,
+    resume_from_run: int | None = None,
     profiler_factory: Callable[..., Any] = Profiler,
     injector_factory: Callable[..., Any] = FaultInjector,
 ) -> dict[str, Any]:
@@ -85,21 +93,48 @@ def run_injection_samples(
         fault_runs=fault_runs,
         retain_all_fault_runs=retain_all_fault_runs,
         num_bits=num_bits,
+        resume_from_run=resume_from_run,
     )
     destination = Path(output_path).resolve()
-    if destination.exists() and not overwrite:
+    if resume_from_run is not None and overwrite:
+        raise ValueError("resume_from_run and overwrite cannot be used together")
+    if destination.exists() and (resume_from_run is not None or not overwrite):
         raise FileExistsError(
             f"Injection output already exists; pass overwrite=True: {destination}"
         )
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(f"{destination.name}.tmp")
-    temporary.unlink(missing_ok=True)
+    resume_state = None
+    if resume_from_run is None:
+        temporary.unlink(missing_ok=True)
+    else:
+        resume_state = _prepare_injection_resume(
+            temporary,
+            resume_from_run=resume_from_run,
+            fault_runs=fault_runs,
+        )
+        print(
+            "[inject] resume_from_run="
+            f"{resume_from_run} retained_rows={resume_state.rows_written}"
+        )
 
     profiler = None
     injector = None
-    total_generated = 0
-    rows_written = 0
-    significant_rows = 0
+    if resume_state is None:
+        total_generated = 0
+        rows_written = 0
+        significant_rows = 0
+        run_indices = [None, *range(fault_runs)]
+        stream_mode = "w"
+    else:
+        sample_count = len(clean_answers.by_sequence)
+        if max_samples is not None:
+            sample_count = min(sample_count, max_samples)
+        total_generated = sample_count * (resume_from_run + 1)
+        rows_written = resume_state.rows_written
+        significant_rows = resume_state.significant_rows
+        run_indices = list(range(resume_from_run, fault_runs))
+        stream_mode = "a"
     try:
         model_adapter.load(device)
         mapping_model = mapping_model.to(device).eval()
@@ -112,8 +147,8 @@ def run_injection_samples(
         injector = injector_factory(model_adapter.model, mode="activation")
         profiler.register()
 
-        with temporary.open("w", encoding="utf-8") as stream:
-            for run_index in [None, *range(fault_runs)]:
+        with temporary.open(stream_mode, encoding="utf-8") as stream:
+            for run_index in run_indices:
                 injected = run_index is not None
                 random.seed(
                     fault_seed if run_index is None else fault_seed + run_index
@@ -123,10 +158,10 @@ def run_injection_samples(
                 ):
                     profiler.reset(clear_stats=True)
                     injector.reset()
-                    injector.register_step_hooks()
                     if injected:
                         injector.set_num_bits(num_bits)
                         injector.inject()
+                    injector.register_step_hooks()
                     try:
                         prediction = model_adapter.generate(
                             sample.question,
@@ -175,7 +210,8 @@ def run_injection_samples(
                         )
                         rows_written += 1
     except BaseException:
-        temporary.unlink(missing_ok=True)
+        if resume_state is None:
+            temporary.unlink(missing_ok=True)
         raise
     finally:
         if injector is not None:
@@ -193,6 +229,7 @@ def run_injection_samples(
         "fault_runs": fault_runs,
         "retain_all_fault_runs": retain_all_fault_runs,
         "num_bits": num_bits,
+        "resumed_from_run": resume_from_run,
         "output": str(destination),
     }
 
@@ -208,6 +245,7 @@ def run_injection_job(
     golden_path: str | Path | None = None,
     mapping_model_path: str | Path | None = None,
     overwrite: bool = False,
+    resume_from_run: int | None = None,
 ) -> dict[str, Any]:
     job = load_pipeline_job(
         config_path,
@@ -230,13 +268,14 @@ def run_injection_job(
         projection_dim=job.projection_dim,
         projection_method=job.projection_method,
         profiler_seed=job.profiler_seed,
-        fault_runs=int(injection.get("fault_runs", 8)),
+        fault_runs=int(injection.get("fault_runs", 10)),
         retain_all_fault_runs=int(
             injection.get("retain_all_fault_runs", 1)
         ),
         num_bits=int(injection.get("num_bits", 2)),
         fault_seed=int(injection.get("seed", 42)),
         overwrite=overwrite,
+        resume_from_run=resume_from_run,
     )
     summary.update(
         {
@@ -282,10 +321,11 @@ def _build_result_record(
     injected: bool,
 ) -> dict[str, Any]:
     metadata = dict(sample.metadata)
+    run_identity = "clean" if not injected else f"fault:{run_index}"
     record = {
         "id": sequence_id,
         "orig_id": sample.orig_id,
-        "sample_uid": sample.orig_id,
+        "sample_uid": f"{sample.orig_id}:{run_identity}",
         "before_score": 0.0,
         "after_score": 0.0,
         "dtel_score": 0.0,
@@ -314,6 +354,7 @@ def _validate_injection_parameters(
     fault_runs: int,
     retain_all_fault_runs: int,
     num_bits: int,
+    resume_from_run: int | None,
 ) -> None:
     if max_samples is not None and max_samples <= 0:
         raise ValueError("max_samples must be positive")
@@ -325,6 +366,83 @@ def _validate_injection_parameters(
         )
     if num_bits <= 0:
         raise ValueError("num_bits must be positive")
+    if resume_from_run is not None and not 0 <= resume_from_run < fault_runs:
+        raise ValueError(
+            "resume_from_run must identify an existing fault run"
+        )
+
+
+def _prepare_injection_resume(
+    temporary: Path,
+    *,
+    resume_from_run: int,
+    fault_runs: int,
+) -> _InjectionResumeState:
+    if not temporary.is_file():
+        raise FileNotFoundError(
+            f"Injection resume file does not exist: {temporary}"
+        )
+
+    recovery = temporary.with_name(f"{temporary.name}.resume")
+    recovery.unlink(missing_ok=True)
+    rows_written = 0
+    significant_rows = 0
+    last_fault_run: int | None = None
+    try:
+        with (
+            temporary.open("r", encoding="utf-8") as source,
+            recovery.open("w", encoding="utf-8") as destination,
+        ):
+            for line_number, line in enumerate(source, start=1):
+                if not line.strip():
+                    raise ValueError(
+                        f"Empty injection record at line {line_number}"
+                    )
+                record = json.loads(line)
+                run_index = record.get("run_index")
+                if run_index is not None:
+                    if (
+                        not isinstance(run_index, int)
+                        or isinstance(run_index, bool)
+                        or not 0 <= run_index < fault_runs
+                    ):
+                        raise ValueError(
+                            f"Invalid run_index at line {line_number}: "
+                            f"{run_index!r}"
+                        )
+                    if (
+                        last_fault_run is not None
+                        and run_index < last_fault_run
+                    ):
+                        raise ValueError(
+                            "Injection resume records are not ordered by run"
+                        )
+                    last_fault_run = run_index
+                elif last_fault_run is not None:
+                    raise ValueError(
+                        "Clean injection record appears after a fault run"
+                    )
+
+                if run_index is None or run_index < resume_from_run:
+                    destination.write(line)
+                    rows_written += 1
+                    significant_rows += int(bool(record.get("is_sdc", 0)))
+
+        if last_fault_run != resume_from_run:
+            raise ValueError(
+                f"Resume file ends in run {last_fault_run}; "
+                f"requested run {resume_from_run}"
+            )
+        recovery.replace(temporary)
+    except BaseException:
+        recovery.unlink(missing_ok=True)
+        raise
+
+    return _InjectionResumeState(
+        start_run_index=resume_from_run,
+        rows_written=rows_written,
+        significant_rows=significant_rows,
+    )
 
 
 def _json_safe(value: Any) -> Any:

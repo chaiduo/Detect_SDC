@@ -26,9 +26,17 @@ def run_stage(
     max_samples: int | None = None,
     batch_size: int = 64,
     overwrite: bool = False,
+    resume_injection_from_run: int | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     selected = PipelineStage(stage)
+    if (
+        resume_injection_from_run is not None
+        and selected != PipelineStage.INJECT
+    ):
+        raise ValueError(
+            "resume_injection_from_run is only valid for the inject stage"
+        )
     job = load_pipeline_job(
         config_path,
         job_name,
@@ -69,6 +77,7 @@ def run_stage(
             device=device,
             max_samples=max_samples,
             overwrite=overwrite,
+            resume_from_run=resume_injection_from_run,
         )
     elif selected == PipelineStage.LABEL:
         summary = _dry_run_summary(job.name, selected) if dry_run else run_label_job(

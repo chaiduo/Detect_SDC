@@ -1,0 +1,143 @@
+{
+  "model": "Qwen2.5-VL-7B",
+  "model_key": "qwen25_vl",
+  "dataset": "LingoQA",
+  "gpu_physical_id": "5",
+  "cuda_visible_devices": "5",
+  "samples_per_repeat": 50,
+  "warmup_samples": 5,
+  "repeats": 2,
+  "max_new_tokens": 50,
+  "online_steps": 2,
+  "mode_order": "reverse",
+  "layer_pairs": [
+    [
+      6,
+      7
+    ],
+    [
+      22,
+      23
+    ],
+    [
+      23,
+      24
+    ],
+    [
+      24,
+      25
+    ],
+    [
+      25,
+      26
+    ],
+    [
+      26,
+      27
+    ]
+  ],
+  "monitored_layers": [
+    6,
+    7,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27
+  ],
+  "modes_completed": [
+    "vanilla",
+    "step_hook",
+    "monitor",
+    "predictor",
+    "sieve"
+  ],
+  "metrics": {
+    "vanilla": {
+      "samples": 100,
+      "answer_match_rate": 1.0,
+      "latency_mean_ms": 534.9320180807263,
+      "latency_p50_ms": 537.9352329764515,
+      "latency_p95_ms": 620.2504599059465,
+      "tokens_per_second": 28.43351956118033,
+      "peak_allocated_mean_mb": 16192.51455078125,
+      "peak_allocated_max_mb": 16195.59375,
+      "peak_reserved_max_mb": 16608.0
+    },
+    "step_hook": {
+      "samples": 100,
+      "answer_match_rate": 0.94,
+      "latency_mean_ms": 537.5223956850823,
+      "latency_p50_ms": 534.5908749732189,
+      "latency_p95_ms": 624.0411145496181,
+      "tokens_per_second": 28.20347602573526,
+      "peak_allocated_mean_mb": 16192.51455078125,
+      "peak_allocated_max_mb": 16195.59375,
+      "peak_reserved_max_mb": 16608.0,
+      "latency_overhead_percent": 0.48424426222419825,
+      "throughput_change_percent": -0.8090575454441584,
+      "extra_peak_allocated_mb": 0.0
+    },
+    "monitor": {
+      "samples": 100,
+      "answer_match_rate": 0.97,
+      "latency_mean_ms": 540.7950239127968,
+      "latency_p50_ms": 547.8767770109698,
+      "latency_p95_ms": 631.8270369316451,
+      "tokens_per_second": 28.069784906984975,
+      "peak_allocated_mean_mb": 16193.39052734375,
+      "peak_allocated_max_mb": 16196.4697265625,
+      "peak_reserved_max_mb": 16608.0,
+      "detection_ready_mean_ms": 348.5954211326316,
+      "detection_ready_p50_ms": 346.5408035553992,
+      "detection_ready_p95_ms": 352.15737681719474,
+      "detection_after_prefill_mean_ms": 145.1020792964846,
+      "detection_after_prefill_p50_ms": 144.90468555595726,
+      "detection_after_prefill_p95_ms": 146.13277952885255,
+      "latency_overhead_percent": 1.096028211791511,
+      "throughput_change_percent": -1.2792459737976047,
+      "extra_peak_allocated_mb": 0.8759765625
+    },
+    "predictor": {
+      "samples": 100,
+      "answer_match_rate": 0.97,
+      "latency_mean_ms": 539.5458167046309,
+      "latency_p50_ms": 531.2765465350822,
+      "latency_p95_ms": 625.0439143273979,
+      "tokens_per_second": 28.13477471239508,
+      "peak_allocated_mean_mb": 16193.39052734375,
+      "peak_allocated_max_mb": 16196.4697265625,
+      "peak_reserved_max_mb": 16608.0,
+      "detection_ready_mean_ms": 348.9913908194285,
+      "detection_ready_p50_ms": 348.4929614351131,
+      "detection_ready_p95_ms": 352.9321894107852,
+      "detection_after_prefill_mean_ms": 146.64548461907543,
+      "detection_after_prefill_p50_ms": 146.62960497662425,
+      "detection_after_prefill_p95_ms": 147.2466253559105,
+      "latency_overhead_percent": 0.8625018634065507,
+      "throughput_change_percent": -1.0506784013932569,
+      "extra_peak_allocated_mb": 0.8759765625
+    },
+    "sieve": {
+      "samples": 100,
+      "answer_match_rate": 0.96,
+      "latency_mean_ms": 539.9786473345011,
+      "latency_p50_ms": 531.7244894686155,
+      "latency_p95_ms": 623.7650259630755,
+      "tokens_per_second": 28.093703473060895,
+      "peak_allocated_mean_mb": 16193.39052734375,
+      "peak_allocated_max_mb": 16196.4697265625,
+      "peak_reserved_max_mb": 16608.0,
+      "detection_ready_mean_ms": 351.0331824317109,
+      "detection_ready_p50_ms": 350.9834145079367,
+      "detection_ready_p95_ms": 353.6046698805876,
+      "detection_after_prefill_mean_ms": 149.47831524419598,
+      "detection_after_prefill_p50_ms": 148.6725959694013,
+      "detection_after_prefill_p95_ms": 151.69032705016434,
+      "latency_overhead_percent": 0.9434150664380914,
+      "throughput_change_percent": -1.1951249559107646,
+      "extra_peak_allocated_mb": 0.8759765625
+    }
+  }
+}

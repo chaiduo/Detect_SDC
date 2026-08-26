@@ -1,6 +1,7 @@
 import io
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 from PIL import Image
 
@@ -47,6 +48,43 @@ class ModelAdapterTest(unittest.TestCase):
         self.assertIn("30 words", adapter.answer_suffix)
         with self.assertRaisesRegex(RuntimeError, "not loaded"):
             _ = adapter.model
+
+    def test_internvl3_generation_sets_pad_token_id(self):
+        class FakePixels:
+            def to(self, **_kwargs):
+                return self
+
+        class FakeChatModel:
+            device = "cuda:0"
+
+            def __init__(self):
+                self.generation_config = None
+
+            def chat(
+                self,
+                _tokenizer,
+                _pixel_values,
+                _prompt,
+                generation_config,
+            ):
+                self.generation_config = generation_config
+                return "answer"
+
+        adapter = InternVL3Adapter(model_path="/unused")
+        adapter._chat_model = FakeChatModel()
+        adapter._tokenizer = SimpleNamespace(
+            pad_token_id=151645,
+            eos_token_id=151645,
+        )
+        adapter._load_pixel_values = lambda image: FakePixels()
+
+        answer = adapter.generate("question", object(), max_new_tokens=50)
+
+        self.assertEqual(answer, "answer")
+        self.assertEqual(
+            adapter._chat_model.generation_config["pad_token_id"],
+            151645,
+        )
 
     def test_image_normalization_supports_embedded_parquet_bytes(self):
         image = Image.new("RGB", (2, 2), color="red")
