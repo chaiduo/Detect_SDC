@@ -31,6 +31,12 @@ venv/
 *.ckpt
 *.onnx
 *.safetensors
+*.ubj
+
+# Local model workspaces
+InternVL3-8B/
+Qwen2.5-VL-7B/
+llava-v1.5-7B/
 
 # Data files
 *.parquet
@@ -54,6 +60,13 @@ figure/
 figures/
 visualization/
 viz_*/
+
+# Portable, aggregate-only paper figure data
+!figures/
+figures/*
+!figures/significant_sdc_share.csv
+!figures/fault_quadrant_counts.csv
+!figures/figure_data_manifest.json
 
 # Training data
 train_data/

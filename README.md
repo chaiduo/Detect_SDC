@@ -1,8 +1,16 @@
 # Detect SDC
 
 Detect SDC evaluates silent data corruption in multimodal language models. All
-runtime code lives under `src/detect_sdc/`. The `Qwen2.5-VL-7B/` and
-`llava-v1.5-7B/` trees contain only configured inputs and experiment artifacts.
+runtime code lives under `src/detect_sdc/`. The `Qwen2.5-VL-7B/`,
+`InternVL3-8B/`, and `llava-v1.5-7B/` trees contain only configured inputs and
+experiment artifacts.
+
+完整实验设计、结果表、论文归属和复现入口见
+[`docs/experiments_overview.md`](docs/experiments_overview.md)。
+从原始数据重跑所需的环境、外部依赖、固定切分、完整命令和校验清单见
+[`docs/reproducibility.md`](docs/reproducibility.md)。
+无需原始 JSONL、模型或 GPU 的论文图片重画说明见
+[`docs/figure_data.md`](docs/figure_data.md)。
 
 ## Pipeline
 
@@ -114,7 +122,7 @@ PYTHONPATH=src python -m detect_sdc.cli label \
 
 ## Feature extraction
 
-All six model and dataset combinations use the same streaming extractor and
+All nine model and dataset combinations use the same streaming extractor and
 `orig_id`-grouped splitter. Run a configured job with:
 
 ```bash
@@ -139,7 +147,7 @@ with different feature content is rejected instead of being silently merged.
 
 ## Detector
 
-All six jobs train one binary XGBoost target: `significant_sdc_target`. Rows
+All nine jobs train one binary XGBoost target: `significant_sdc_target`. Rows
 whose 72 features are all NaN remain in training. The same fitted model reports
 `valid_full_metrics` and `valid_non_all_nan_metrics`. Train/test splitting is
 deterministic and grouped by `orig_id`; overlap is rejected.
