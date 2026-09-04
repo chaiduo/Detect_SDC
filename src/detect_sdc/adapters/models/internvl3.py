@@ -5,6 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
+from .determinism import (
+    DEFAULT_DETERMINISTIC_SEED,
+    configure_deterministic_execution,
+    prepare_deterministic_environment,
+    seed_torch,
+)
 from .images import load_pil_image
 
 
@@ -21,6 +27,8 @@ class InternVL3Adapter:
     load_in_8bit: bool = False
     device_map: Any = None
     answer_suffix: str = "The answer must be limited to 30 words."
+    deterministic: bool = False
+    seed: int = DEFAULT_DETERMINISTIC_SEED
     _chat_model: Any = field(default=None, init=False, repr=False)
     _tokenizer: Any = field(default=None, init=False, repr=False)
     _device: str | None = field(default=None, init=False, repr=False)
@@ -51,6 +59,8 @@ class InternVL3Adapter:
                     "The answer must be limited to 30 words.",
                 )
             ),
+            deterministic=bool(generation.get("deterministic", False)),
+            seed=int(generation.get("seed", DEFAULT_DETERMINISTIC_SEED)),
         )
 
     @property
@@ -60,9 +70,15 @@ class InternVL3Adapter:
         return getattr(self._chat_model, "language_model", self._chat_model)
 
     def load(self, device: str) -> None:
+        prepare_deterministic_environment(self.deterministic)
         import torch
         from transformers import AutoModel, AutoTokenizer
 
+        configure_deterministic_execution(
+            torch,
+            enabled=self.deterministic,
+            seed=self.seed,
+        )
         dtype = _torch_dtype(torch, self.torch_dtype)
         kwargs: dict[str, Any] = {
             "torch_dtype": dtype,
@@ -100,6 +116,8 @@ class InternVL3Adapter:
 
         if self._chat_model is None or self._tokenizer is None:
             raise RuntimeError("InternVL3Adapter must be loaded before generate")
+        if self.deterministic:
+            seed_torch(torch, self.seed)
 
         pixel_values = self._load_pixel_values(image).to(
             device=self._chat_model.device,

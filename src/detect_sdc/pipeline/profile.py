@@ -10,7 +10,9 @@ from typing import Any
 from ..adapters import load_dataset_adapter, load_model_adapter
 from ..adapters.datasets.base import DatasetAdapter
 from ..adapters.models.base import ModelAdapter
+from ..dataset_splits import DatasetSplitManifest
 from .jobs import load_pipeline_job
+from .split import load_configured_split_manifest
 
 
 def profile_samples(
@@ -20,6 +22,7 @@ def profile_samples(
     device: str,
     max_samples: int | None,
     max_new_tokens: int,
+    split_manifest: DatasetSplitManifest | None = None,
 ) -> list[dict[str, Any]]:
     results = []
     model_adapter.load(device)
@@ -27,6 +30,24 @@ def profile_samples(
         for sequence_id, sample in enumerate(
             dataset_adapter.iter_samples(max_samples=max_samples)
         ):
+            assignment = (
+                None
+                if split_manifest is None
+                else split_manifest.assignment_for_orig_id(sample.orig_id)
+            )
+            if assignment is not None and assignment.sequence_id != sequence_id:
+                raise ValueError(
+                    "Dataset iteration order differs from split manifest "
+                    f"for {sample.orig_id}"
+                )
+            if (
+                assignment is not None
+                and assignment.semantic_group_id != sample.semantic_group_id
+            ):
+                raise ValueError(
+                    "Dataset semantic_group_id differs from split manifest "
+                    f"for {sample.orig_id}"
+                )
             prediction = model_adapter.generate(
                 sample.question,
                 sample.image,
@@ -36,6 +57,8 @@ def profile_samples(
                 {
                     "id": sequence_id,
                     "orig_id": sample.orig_id,
+                    "semantic_group_id": sample.semantic_group_id,
+                    "split": None if assignment is None else assignment.split,
                     "sample_uid": sample.orig_id,
                     "question": sample.question,
                     "gt_answer": sample.ground_truth,
@@ -65,6 +88,10 @@ def run_profile_job(
     )
     model = load_model_adapter(job.model_config_path)
     dataset = load_dataset_adapter(job.dataset_config_path)
+    split_manifest = load_configured_split_manifest(
+        job.dataset_config,
+        repository_root=repository_root,
+    )
     _set_seed(42)
     results = profile_samples(
         model,
@@ -72,6 +99,7 @@ def run_profile_job(
         device=device,
         max_samples=job.max_samples if max_samples is None else max_samples,
         max_new_tokens=job.max_new_tokens,
+        split_manifest=split_manifest,
     )
     destination = (
         Path(output_path).resolve() if output_path else job.paths.profile_output

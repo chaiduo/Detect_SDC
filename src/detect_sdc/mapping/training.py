@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
-import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -24,6 +24,7 @@ class InterLayerJsonlTensorDataset(Dataset):
         src_layers: list[int] = []
         tgt_layers: list[int] = []
         steps: list[int] = []
+        group_ids: list[str] = []
 
         print(f"[Info] Start reading: {file_path}")
         with Path(file_path).open("r", encoding="utf-8") as stream:
@@ -36,12 +37,23 @@ class InterLayerJsonlTensorDataset(Dataset):
                 src_layers.append(int(record["src_layer"]))
                 tgt_layers.append(int(record["tgt_layer"]))
                 steps.append(int(record["step"]))
+                group_id = record.get(
+                    "semantic_group_id",
+                    record.get("orig_id", record.get("sample_id")),
+                )
+                if group_id is None or not str(group_id).strip():
+                    raise ValueError(
+                        "Mapping row is missing semantic_group_id, "
+                        "orig_id, and sample_id"
+                    )
+                group_ids.append(str(group_id))
 
         self.x = torch.tensor(xs, dtype=torch.float32)
         self.y = torch.tensor(ys, dtype=torch.float32)
         self.src_layer = torch.tensor(src_layers, dtype=torch.long)
         self.tgt_layer = torch.tensor(tgt_layers, dtype=torch.long)
         self.step = torch.tensor(steps, dtype=torch.long)
+        self.group_ids = tuple(group_ids)
         if self.x.ndim != 2 or self.y.shape != self.x.shape:
             raise ValueError(
                 "Mapping data must contain equally shaped 2D x/y vectors"
@@ -89,7 +101,7 @@ class LayerAwareResidualMLP(nn.Module):
         num_layers: int = 28,
         layer_emb_dim: int = 16,
         hidden_dim: int = 64,
-        num_blocks: int = 4,
+        num_blocks: int = 8,
         dropout: float = 0.1,
     ):
         super().__init__()
@@ -142,71 +154,78 @@ class MappingSplits:
 def split_mapping_dataset(
     dataset: Dataset,
     *,
-    strategy: str,
     valid_ratio: float,
     test_ratio: float,
-    test_ratio_in_train: float,
     seed: int,
 ) -> MappingSplits:
-    """Create the two historical split layouts without duplicating trainers."""
+    """Create deterministic group-disjoint train, validation, and test splits."""
 
     total = len(dataset)
     if total <= 0:
         raise ValueError("Mapping dataset is empty")
-    for name, ratio in (
-        ("valid_ratio", valid_ratio),
-        ("test_ratio", test_ratio),
-        ("test_ratio_in_train", test_ratio_in_train),
-    ):
+    for name, ratio in (("valid_ratio", valid_ratio), ("test_ratio", test_ratio)):
         if not 0.0 < ratio < 1.0:
             raise ValueError(f"{name} must be between 0 and 1")
-
-    if strategy == "sequential":
-        final_size = int(total * valid_ratio)
-        training_pool_size = total - final_size
-        selection_size = int(training_pool_size * test_ratio_in_train)
-        train_size = training_pool_size - selection_size
-        _validate_split_sizes(train_size, selection_size, final_size)
-        train_indices = list(range(train_size))
-        selection_indices = list(range(train_size, training_pool_size))
-        final_indices = list(range(training_pool_size, total))
-        selection_name, final_name = "Test", "Valid"
-    elif strategy == "random":
-        selection_size = int(total * valid_ratio)
-        final_size = int(total * test_ratio)
-        train_size = total - selection_size - final_size
-        _validate_split_sizes(train_size, selection_size, final_size)
-        indices = list(range(total))
-        random.Random(seed).shuffle(indices)
-        final_indices = indices[:final_size]
-        selection_indices = indices[
-            final_size : final_size + selection_size
-        ]
-        train_indices = indices[final_size + selection_size :]
-        selection_name, final_name = "Valid", "Test"
-    elif strategy == "partition":
-        selection_size = int(total * valid_ratio)
-        final_size = int(total * test_ratio)
-        train_size = total - selection_size - final_size
-        _validate_split_sizes(train_size, selection_size, final_size)
-        train_indices = list(range(train_size))
-        selection_indices = list(
-            range(train_size, train_size + selection_size)
-        )
-        final_indices = list(
-            range(train_size + selection_size, total)
-        )
-        selection_name, final_name = "Valid", "Test"
-    else:
+    if valid_ratio + test_ratio >= 1.0:
+        raise ValueError("valid_ratio + test_ratio must be less than one")
+    group_ids = getattr(dataset, "group_ids", None)
+    if group_ids is None or len(group_ids) != total:
         raise ValueError(
-            "mapping split strategy must be sequential, random, or partition"
+            "Mapping dataset must expose one group_id per telemetry row"
         )
+    unique_groups = sorted(
+        set(group_ids),
+        key=lambda group_id: hashlib.sha256(
+            f"{seed}:{group_id}".encode("utf-8")
+        ).hexdigest(),
+    )
+    if len(unique_groups) < 3:
+        raise ValueError(
+            "Mapping grouped splitting requires at least three groups"
+        )
+
+    valid_group_count = max(1, round(len(unique_groups) * valid_ratio))
+    test_group_count = max(1, round(len(unique_groups) * test_ratio))
+    if valid_group_count + test_group_count >= len(unique_groups):
+        raise ValueError(
+            "Mapping split ratios leave no groups for training"
+        )
+    final_groups = set(unique_groups[:test_group_count])
+    selection_groups = set(
+        unique_groups[
+            test_group_count : test_group_count + valid_group_count
+        ]
+    )
+    train_groups = set(unique_groups) - final_groups - selection_groups
+    train_indices = [
+        index
+        for index, group_id in enumerate(group_ids)
+        if group_id in train_groups
+    ]
+    selection_indices = [
+        index
+        for index, group_id in enumerate(group_ids)
+        if group_id in selection_groups
+    ]
+    final_indices = [
+        index
+        for index, group_id in enumerate(group_ids)
+        if group_id in final_groups
+    ]
+    _validate_split_sizes(
+        len(train_indices),
+        len(selection_indices),
+        len(final_indices),
+    )
+    selection_name, final_name = "Valid", "Test"
 
     print(
-        f"[Split] strategy={strategy} total={total} "
+        f"[Split] strategy=group_hash total={total} "
         f"train={len(train_indices)} "
         f"{selection_name.lower()}={len(selection_indices)} "
-        f"{final_name.lower()}={len(final_indices)}"
+        f"{final_name.lower()}={len(final_indices)} "
+        f"groups={len(train_groups)}/{len(selection_groups)}/"
+        f"{len(final_groups)}"
     )
     return MappingSplits(
         train=Subset(dataset, train_indices),
@@ -220,7 +239,7 @@ def split_mapping_dataset(
 def regression_loss(
     prediction: torch.Tensor,
     target: torch.Tensor,
-    cosine_weight: float = 0.1,
+    cosine_weight: float = 1.0,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     mse = F.mse_loss(prediction, target)
     cosine_loss = (
@@ -336,12 +355,10 @@ def train_model(
     weight_decay: float = 1e-4,
     epochs: int = 500,
     num_workers: int = 8,
-    split_strategy: str = "sequential",
     valid_ratio: float = 0.15,
-    test_ratio: float = 0.1,
-    test_ratio_in_train: float = 0.15,
+    test_ratio: float = 0.15,
     cosine_weight: float = 1.0,
-    early_stop_patience: int = 5,
+    early_stop_patience: int = 10,
     scheduler_enabled: bool = True,
     scheduler_patience: int = 5,
     scheduler_factor: float = 0.5,
@@ -361,13 +378,15 @@ def train_model(
     if final_metrics not in {"detailed", "loss"}:
         raise ValueError("final_metrics must be 'detailed' or 'loss'")
 
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
     dataset = InterLayerJsonlTensorDataset(jsonl_path)
     splits = split_mapping_dataset(
         dataset,
-        strategy=split_strategy,
         valid_ratio=valid_ratio,
         test_ratio=test_ratio,
-        test_ratio_in_train=test_ratio_in_train,
         seed=seed,
     )
     loader_kwargs = {

@@ -14,17 +14,15 @@ from .profiles import DrDNAConfig
 @dataclass(frozen=True)
 class ComparisonConfig:
     source_config: Path
+    results_root: Path
     layer_pairs: tuple[tuple[int, int], ...]
     max_steps: int
-    calibration_ratio: float
-    split_seed: int
+    profile_seed: int
     ranger_profile_fraction: float
     maximum_profile_samples: int | None
     drdna: DrDNAConfig
-    target_fpr: float
+    calibration_strategy: str
     supplementary_fpr_budgets: tuple[float, ...]
-    maximum_sdc: int | None
-    maximum_non_sdc: int | None
     bootstrap_replicates: int
     bootstrap_seed: int
 
@@ -43,12 +41,17 @@ def load_comparison_config(
     source = Path(path).resolve()
     root = Path(repository_root).resolve()
     value = load_yaml(source)
+    if int(value.get("schema_version", -1)) != 2:
+        raise ValueError("Comparison configuration requires schema_version=2")
     experiment = _mapping(value.get("experiment"), "experiment")
     monitoring = _mapping(value.get("monitoring"), "monitoring")
     cohorts = _mapping(value.get("cohorts"), "cohorts")
     drdna = _mapping(value.get("drdna"), "drdna")
     calibration = _mapping(value.get("calibration"), "calibration")
     evaluation = _mapping(value.get("evaluation"), "evaluation")
+    calibration_strategy = str(calibration.get("strategy", ""))
+    if calibration_strategy != "maximize_f1":
+        raise ValueError("calibration.strategy must be maximize_f1")
 
     source_config = Path(str(experiment["source_config"]))
     if not source_config.is_absolute():
@@ -60,14 +63,16 @@ def load_comparison_config(
     if not pairs or len(pairs) != len(set(pairs)):
         raise ValueError("monitoring.layer_pairs must be non-empty and unique")
 
+    results_root = Path(str(experiment["results_root"]))
+    if not results_root.is_absolute():
+        results_root = root / results_root
+
     return ComparisonConfig(
         source_config=source_config.resolve(),
+        results_root=results_root.resolve(),
         layer_pairs=pairs,
         max_steps=int(monitoring["max_steps"]),
-        calibration_ratio=float(
-            cohorts["calibration_ratio_within_train"]
-        ),
-        split_seed=int(cohorts["split_seed"]),
+        profile_seed=int(cohorts["profile_seed"]),
         ranger_profile_fraction=float(
             cohorts["ranger_profile_fraction_of_fit"]
         ),
@@ -75,16 +80,10 @@ def load_comparison_config(
             cohorts.get("maximum_profile_samples")
         ),
         drdna=DrDNAConfig(**drdna),
-        target_fpr=float(calibration["target_non_sdc_fpr"]),
+        calibration_strategy=calibration_strategy,
         supplementary_fpr_budgets=tuple(
             float(item)
             for item in calibration["supplementary_fpr_budgets"]
-        ),
-        maximum_sdc=_optional_int(
-            evaluation.get("maximum_sdc_per_model_dataset")
-        ),
-        maximum_non_sdc=_optional_int(
-            evaluation.get("maximum_non_sdc_per_model_dataset")
         ),
         bootstrap_replicates=int(evaluation["bootstrap_replicates"]),
         bootstrap_seed=int(evaluation["bootstrap_seed"]),

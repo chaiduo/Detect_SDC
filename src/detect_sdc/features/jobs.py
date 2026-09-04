@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from ..config import load_yaml
-from ..splitting import split_by_group, validate_identity_columns
+from ..dataset_splits import load_split_manifest
+from ..splitting import validate_identity_columns
 from .extraction import (
     FeatureSpec,
     LayerPair,
@@ -27,11 +28,11 @@ class FeatureJob:
     dataset: str
     uid_namespace: str
     input_path: Path
-    train_output: Path
-    valid_output: Path
+    fit_output: Path
+    calibration_output: Path
+    test_output: Path
+    split_manifest: Path
     group_column: str
-    valid_ratio: float
-    random_state: int
     spec: FeatureSpec
 
 
@@ -89,16 +90,25 @@ def load_feature_job(
         dataset=dataset,
         uid_namespace=str(job.get("uid_namespace", job_name)),
         input_path=_resolve_path(root, _required_string(job, "input")),
-        train_output=_resolve_path(root, _required_string(job, "train_output")),
-        valid_output=_resolve_path(root, _required_string(job, "valid_output")),
-        group_column=str(split.get("group_column", "orig_id")),
-        valid_ratio=float(split.get("valid_ratio", 0.15)),
-        random_state=int(split.get("seed", 42)),
+        fit_output=_resolve_path(root, _required_string(job, "fit_output")),
+        calibration_output=_resolve_path(
+            root,
+            _required_string(job, "calibration_output"),
+        ),
+        test_output=_resolve_path(root, _required_string(job, "test_output")),
+        split_manifest=_resolve_path(
+            root,
+            _required_string(split, "manifest"),
+        ),
+        group_column=str(
+            split.get("group_column", "semantic_group_id")
+        ),
         spec=FeatureSpec(
             selected_layer_pairs=selected_pairs,
             distance_pairs=distance_pairs,
             last_k_steps=int(features.get("last_k_steps", 50)),
             finite_only=bool(features.get("finite_only", True)),
+            step_window=str(features.get("step_window", "suffix")),
         ),
     )
 
@@ -109,15 +119,17 @@ def run_feature_job(
     *,
     repository_root: str | Path,
     max_samples: int | None = None,
-    train_output: str | Path | None = None,
-    valid_output: str | Path | None = None,
+    fit_output: str | Path | None = None,
+    calibration_output: str | Path | None = None,
+    test_output: str | Path | None = None,
 ) -> dict[str, Any]:
     job = load_feature_job(config_path, job_name, repository_root=repository_root)
     return execute_feature_job(
         job,
         max_samples=max_samples,
-        train_output=train_output,
-        valid_output=valid_output,
+        fit_output=fit_output,
+        calibration_output=calibration_output,
+        test_output=test_output,
     )
 
 
@@ -125,13 +137,20 @@ def execute_feature_job(
     job: FeatureJob,
     *,
     max_samples: int | None = None,
-    train_output: str | Path | None = None,
-    valid_output: str | Path | None = None,
+    fit_output: str | Path | None = None,
+    calibration_output: str | Path | None = None,
+    test_output: str | Path | None = None,
 ) -> dict[str, Any]:
     import pandas as pd
 
     if not job.input_path.is_file():
         raise FileNotFoundError(f"Feature input does not exist: {job.input_path}")
+    manifest = load_split_manifest(job.split_manifest)
+    if manifest.dataset != job.dataset:
+        raise ValueError(
+            f"Split manifest dataset is {manifest.dataset}, "
+            f"expected {job.dataset}"
+        )
 
     collector = FeatureRowCollector()
     skipped: Counter[str] = Counter()
@@ -144,6 +163,22 @@ def execute_feature_job(
                 spec=job.spec,
                 uid_namespace=job.uid_namespace,
             )
+            assignment = manifest.assignment_for_orig_id(
+                str(row["orig_id"])
+            )
+            if (
+                str(row["semantic_group_id"])
+                != assignment.semantic_group_id
+            ):
+                raise ValueError(
+                    "Feature semantic_group_id differs from split manifest "
+                    f"for {row['orig_id']}"
+                )
+            if row["split"] not in (None, assignment.split):
+                raise ValueError(
+                    f"Feature split differs from manifest for {row['orig_id']}"
+                )
+            row["split"] = assignment.split
         except SampleSkipped as error:
             skipped[error.reason] += 1
             continue
@@ -162,7 +197,16 @@ def execute_feature_job(
 
     columns = [
         "orig_id",
+        "semantic_group_id",
+        "split",
         "sample_uid",
+        "injected",
+        "run_index",
+        "is_sdc",
+        "fault_component",
+        "fault_layer_index",
+        "fault_op_type",
+        "fault_bit_categories",
         "total_steps",
         "last_k_steps",
         "num_steps_used",
@@ -177,17 +221,35 @@ def execute_feature_job(
         group_column=job.group_column,
         sample_uid_column="sample_uid",
     )
-    split = split_by_group(
-        frame,
-        group_column=job.group_column,
-        holdout_ratio=job.valid_ratio,
-        random_state=job.random_state,
-    )
+    split_frames = {
+        split_name: frame.loc[frame["split"] == split_name].copy()
+        for split_name in ("fit", "calibration", "test")
+    }
+    if sum(len(item) for item in split_frames.values()) != len(frame):
+        raise AssertionError("Feature split assignment lost rows")
+    split_groups = {
+        split_name: set(item[job.group_column].astype(str))
+        for split_name, item in split_frames.items()
+    }
+    if (
+        split_groups["fit"] & split_groups["calibration"]
+        or split_groups["fit"] & split_groups["test"]
+        or split_groups["calibration"] & split_groups["test"]
+    ):
+        raise AssertionError(
+            f"{job.group_column} overlaps across feature splits"
+        )
 
-    train_path = Path(train_output).resolve() if train_output else job.train_output
-    valid_path = Path(valid_output).resolve() if valid_output else job.valid_output
-    _atomic_write_csv(split.train, train_path)
-    _atomic_write_csv(split.holdout, valid_path)
+    fit_path = Path(fit_output).resolve() if fit_output else job.fit_output
+    calibration_path = (
+        Path(calibration_output).resolve()
+        if calibration_output
+        else job.calibration_output
+    )
+    test_path = Path(test_output).resolve() if test_output else job.test_output
+    _atomic_write_csv(split_frames["fit"], fit_path)
+    _atomic_write_csv(split_frames["calibration"], calibration_path)
+    _atomic_write_csv(split_frames["test"], test_path)
 
     summary = {
         "job": job.name,
@@ -202,9 +264,22 @@ def execute_feature_job(
         "significant_sdc_target_counts": _value_counts(
             frame["significant_sdc_target"]
         ),
-        "split": split.summary.to_dict(),
-        "train_output": str(train_path),
-        "valid_output": str(valid_path),
+        "split_manifest": str(job.split_manifest),
+        "split_assignment_sha256": manifest.assignment_sha256,
+        "splits": {
+            split_name: {
+                "rows": len(item),
+                "groups": len(split_groups[split_name]),
+                "target_counts": _value_counts(
+                    item["significant_sdc_target"]
+                ),
+            }
+            for split_name, item in split_frames.items()
+        },
+        "group_overlap": 0,
+        "fit_output": str(fit_path),
+        "calibration_output": str(calibration_path),
+        "test_output": str(test_path),
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return summary

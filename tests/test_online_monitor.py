@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+import numpy as np
 import torch
 
 from detect_sdc.online_monitor import OnlineSieveMonitor
@@ -54,6 +55,28 @@ class OnlineSieveMonitorTests(unittest.TestCase):
             )
         )
         torch.testing.assert_close(features, torch.tensor([0.9, 0.6]))
+
+    def test_sieve_uses_calibrated_threshold(self) -> None:
+        class Detector:
+            def predict_proba(self, _values):
+                return np.asarray([[0.3, 0.7]])
+
+        monitor = OnlineSieveMonitor(
+            object(),
+            mode="sieve",
+            layer_pairs=((6, 7),),
+            projection_dim=64,
+            projection_seed=42,
+            max_steps=1,
+            predictor=object(),
+            detector=Detector(),
+            detector_threshold=0.8,
+        )
+        monitor._step_metrics = [torch.tensor([[0.9, 0.1, 0.2, 0.3]])]
+        monitor._complete_prediction()
+
+        self.assertEqual(monitor.detector_probability, 0.7)
+        self.assertEqual(monitor.detector_prediction, 0)
 
     def test_rejects_unknown_feature_profile(self) -> None:
         with self.assertRaisesRegex(ValueError, "feature profile"):

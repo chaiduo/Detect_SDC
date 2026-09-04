@@ -27,13 +27,13 @@ class DetectionMetrics:
     detected: int
     sdc_samples: int
     significant_sdc_samples: int
-    non_sdc_samples: int
+    non_significant_samples: int
     detected_sdc: int
     detected_significant_sdc: int
-    false_positive_non_sdc: int
+    false_positive_non_significant: int
     sdc_recall: float
     significant_sdc_recall: float
-    non_sdc_fpr: float
+    non_significant_fpr: float
     significant_sdc_precision: float
     significant_sdc_f1: float
 
@@ -108,6 +108,7 @@ def evaluate_detection(
     is_significant_sdc: Sequence[bool | int],
     detected: Sequence[bool | int],
 ) -> DetectionMetrics:
+    """Evaluate Significant-SDC detection with target=0 as the negative class."""
     sdc = np.asarray(is_sdc, dtype=bool)
     significant = np.asarray(is_significant_sdc, dtype=bool)
     predictions = np.asarray(detected, dtype=bool)
@@ -118,13 +119,15 @@ def evaluate_detection(
     if np.any(significant & ~sdc):
         raise ValueError("Significant-SDC samples must also be SDC samples")
 
-    non_sdc = ~sdc
+    non_significant = ~significant
     detected_sdc = int(np.sum(predictions & sdc))
     detected_significant = int(np.sum(predictions & significant))
-    false_positive_non_sdc = int(np.sum(predictions & non_sdc))
+    false_positive_non_significant = int(
+        np.sum(predictions & non_significant)
+    )
     sdc_count = int(sdc.sum())
     significant_count = int(significant.sum())
-    non_sdc_count = int(non_sdc.sum())
+    non_significant_count = int(non_significant.sum())
     detected_count = int(predictions.sum())
 
     sdc_recall = _safe_ratio(detected_sdc, sdc_count)
@@ -149,13 +152,16 @@ def evaluate_detection(
         detected=detected_count,
         sdc_samples=sdc_count,
         significant_sdc_samples=significant_count,
-        non_sdc_samples=non_sdc_count,
+        non_significant_samples=non_significant_count,
         detected_sdc=detected_sdc,
         detected_significant_sdc=detected_significant,
-        false_positive_non_sdc=false_positive_non_sdc,
+        false_positive_non_significant=false_positive_non_significant,
         sdc_recall=sdc_recall,
         significant_sdc_recall=significant_recall,
-        non_sdc_fpr=_safe_ratio(false_positive_non_sdc, non_sdc_count),
+        non_significant_fpr=_safe_ratio(
+            false_positive_non_significant,
+            non_significant_count,
+        ),
         significant_sdc_precision=significant_precision,
         significant_sdc_f1=significant_f1,
     )

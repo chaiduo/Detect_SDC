@@ -108,6 +108,9 @@ class Profiler:
         self,
         file_path: str,
         sample_id: Optional[int] = None,
+        orig_id: Optional[str] = None,
+        semantic_group_id: Optional[str] = None,
+        split: Optional[str] = None,
     ) -> int:
         """
         将降维后的 attn 向量保存为相邻层监督样本 JSONL。
@@ -139,6 +142,9 @@ class Profiler:
 
                     record = {
                         "sample_id": sample_id,
+                        "orig_id": orig_id,
+                        "semantic_group_id": semantic_group_id,
+                        "split": split,
                         "step": step_idx,
                         "src_layer": src_layer,
                         "tgt_layer": tgt_layer,

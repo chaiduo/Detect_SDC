@@ -27,6 +27,8 @@ def run_stage(
     batch_size: int = 64,
     overwrite: bool = False,
     resume_injection_from_run: int | None = None,
+    telemetry_max_steps: int | None = None,
+    injection_output_path: str | Path | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     selected = PipelineStage(stage)
@@ -78,6 +80,8 @@ def run_stage(
             max_samples=max_samples,
             overwrite=overwrite,
             resume_from_run=resume_injection_from_run,
+            telemetry_max_steps=telemetry_max_steps,
+            output_path=injection_output_path,
         )
     elif selected == PipelineStage.LABEL:
         summary = _dry_run_summary(job.name, selected) if dry_run else run_label_job(
@@ -143,7 +147,11 @@ def _run_featurize(
         repository_root=repository_root,
     )
     _require_output_policy(
-        [feature_job.train_output, feature_job.valid_output],
+        [
+            feature_job.fit_output,
+            feature_job.calibration_output,
+            feature_job.test_output,
+        ],
         overwrite,
     )
     return run_feature_job(

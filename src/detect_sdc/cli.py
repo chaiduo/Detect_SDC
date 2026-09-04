@@ -43,9 +43,24 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Repository root used to resolve referenced configuration files",
     )
 
+    split_parser = subparsers.add_parser(
+        "split",
+        help="Create a deterministic dataset split manifest",
+    )
+    split_parser.add_argument("--dataset", required=True)
+    split_parser.add_argument(
+        "--config",
+        default=str(REPOSITORY_ROOT / "configs/experiments/current.yaml"),
+    )
+    split_parser.add_argument(
+        "--repository-root",
+        default=str(REPOSITORY_ROOT),
+    )
+    split_parser.add_argument("--overwrite", action="store_true")
+
     featurize_parser = subparsers.add_parser(
         "featurize",
-        help="Extract telemetry features and split them by orig_id",
+        help="Extract telemetry features using the frozen dataset split",
     )
     featurize_parser.add_argument("--job", required=True, help="Feature job name")
     featurize_parser.add_argument(
@@ -64,16 +79,9 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Process at most this many input samples",
     )
-    featurize_parser.add_argument(
-        "--train-output",
-        default=None,
-        help="Override the configured training CSV path",
-    )
-    featurize_parser.add_argument(
-        "--valid-output",
-        default=None,
-        help="Override the configured validation CSV path",
-    )
+    featurize_parser.add_argument("--fit-output", default=None)
+    featurize_parser.add_argument("--calibration-output", default=None)
+    featurize_parser.add_argument("--test-output", default=None)
 
     train_parser = subparsers.add_parser(
         "train",
@@ -150,6 +158,17 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Resume an interrupted inject stage from this fault run",
     )
+    run_parser.add_argument(
+        "--telemetry-max-steps",
+        type=int,
+        default=None,
+        help="Override prefix telemetry collection length for inject",
+    )
+    run_parser.add_argument(
+        "--injection-output",
+        default=None,
+        help="Override injection JSONL output path for inject",
+    )
     run_parser.add_argument("--dry-run", action="store_true")
 
     return parser
@@ -184,6 +203,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"Execution jobs: {summary['jobs']}")
         return 0
 
+    if args.command == "split":
+        from .pipeline.split import run_split_job
+
+        run_split_job(
+            args.config,
+            args.dataset,
+            repository_root=args.repository_root,
+            overwrite=args.overwrite,
+        )
+        return 0
+
     if args.command == "featurize":
         from .features.jobs import run_feature_job
 
@@ -192,8 +222,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             job_name=args.job,
             repository_root=args.repository_root,
             max_samples=args.max_samples,
-            train_output=args.train_output,
-            valid_output=args.valid_output,
+            fit_output=args.fit_output,
+            calibration_output=args.calibration_output,
+            test_output=args.test_output,
         )
         return 0
 
@@ -237,6 +268,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 batch_size=args.batch_size,
                 overwrite=args.overwrite,
                 resume_injection_from_run=args.resume_injection_from_run,
+                telemetry_max_steps=args.telemetry_max_steps,
+                injection_output_path=args.injection_output,
                 dry_run=args.dry_run,
             )
         return 0

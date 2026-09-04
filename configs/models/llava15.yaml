@@ -23,19 +23,17 @@ mapping_training:
     weight_decay: 0.0001
     epochs: 500
     num_workers: 8
-    split_strategy: sequential
     valid_ratio: 0.15
-    test_ratio: 0.1
-    test_ratio_in_train: 0.15
+    test_ratio: 0.15
     cosine_weight: 1.0
-    early_stop_patience: 5
-    scheduler_enabled: false
+    early_stop_patience: 10
+    scheduler_enabled: true
     scheduler_patience: 5
     scheduler_factor: 0.5
     min_lr: 0.000001
-    pin_memory: false
-    persistent_workers: false
-    final_metrics: loss
+    pin_memory: true
+    persistent_workers: true
+    final_metrics: detailed
     seed: 42
 
 injection:
@@ -44,10 +42,10 @@ injection:
     x_dim: 64
     num_layers: 32
     layer_emb_dim: 16
-    hidden_dim: 256
-    num_blocks: 4
+    hidden_dim: 64
+    num_blocks: 8
     dropout: 0.1
   fault_runs: 10
-  retain_all_fault_runs: 1
   num_bits: 2
+  bit_policy: random
   seed: 42

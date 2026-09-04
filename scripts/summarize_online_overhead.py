@@ -33,17 +33,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--forward-root",
         type=Path,
-        default=root / "analysis/online_overhead_20260814",
+        default=root / "analysis/iclr_v2/online_overhead/forward",
     )
     parser.add_argument(
         "--reverse-root",
         type=Path,
-        default=root / "analysis/online_overhead_reverse_20260814",
+        default=root / "analysis/iclr_v2/online_overhead/reverse",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=root / "analysis/online_overhead_20260814/combined",
+        default=root / "analysis/iclr_v2/online_overhead/combined",
     )
     parser.add_argument("--bootstrap-replicates", type=int, default=10_000)
     parser.add_argument("--seed", type=int, default=20_260_814)

@@ -68,6 +68,10 @@ figures/*
 !figures/fault_quadrant_counts.csv
 !figures/figure_data_manifest.json
 
+# Frozen dataset split manifests
+!splits/
+!splits/*.json
+
 # Training data
 train_data/
 test_data/

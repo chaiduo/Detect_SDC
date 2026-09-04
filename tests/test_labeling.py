@@ -78,6 +78,21 @@ class PrometheusLabelingTest(unittest.TestCase):
         self.assertEqual(judge.calls, [["wrong", "minor"]])
         self.assertEqual(failures, [])
 
+    def test_empty_response_is_significant_without_calling_judge(self):
+        judge = _FakeJudge([])
+
+        labeled, failures = label_records(
+            [_record("", "clean")],
+            judge,
+            batch_size=1,
+        )
+
+        self.assertEqual(labeled[0]["label_status"], "empty_response")
+        self.assertEqual(labeled[0]["quality_score"], 0)
+        self.assertEqual(labeled[0]["significance"], 2)
+        self.assertEqual(judge.calls, [])
+        self.assertEqual(failures, [])
+
     def test_parse_failure_uses_explicit_status_and_null_labels(self):
         judge = _FakeJudge([-1])
 

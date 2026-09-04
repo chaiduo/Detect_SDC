@@ -15,6 +15,9 @@ sampling:
   deterministic_order: true
 
 split:
-  group_column: orig_id
-  valid_ratio: 0.15
+  manifest: splits/earthvqa_seed42.json
+  group_column: semantic_group_id
+  fit_ratio: 0.70
+  calibration_ratio: 0.15
+  test_ratio: 0.15
   seed: 42

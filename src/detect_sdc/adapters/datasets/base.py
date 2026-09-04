@@ -9,6 +9,7 @@ from typing import Any, Iterable, Mapping, Protocol, runtime_checkable
 @dataclass(frozen=True)
 class DatasetSample:
     orig_id: str
+    semantic_group_id: str
     question: str
     ground_truth: str | None
     image: Any
@@ -17,6 +18,8 @@ class DatasetSample:
     def __post_init__(self) -> None:
         if not self.orig_id:
             raise ValueError("orig_id must not be empty")
+        if not self.semantic_group_id:
+            raise ValueError("semantic_group_id must not be empty")
         if not self.question:
             raise ValueError("question must not be empty")
 
@@ -29,4 +32,3 @@ class DatasetAdapter(Protocol):
 
     def iter_samples(self, max_samples: int | None = None) -> Iterable[DatasetSample]:
         """Yield normalized samples in deterministic order."""
-

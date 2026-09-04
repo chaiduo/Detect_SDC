@@ -7,8 +7,11 @@ from detect_sdc.detector import (
     XGBoostConfig,
     add_significant_sdc_target,
     binary_metrics,
+    calibrate_threshold_at_fpr,
+    calibrate_threshold_max_f1,
     get_feature_columns,
     prepare_features,
+    significant_sdc_negative_mask,
 )
 
 
@@ -61,6 +64,20 @@ class XGBoostDetectorTest(unittest.TestCase):
 
         self.assertEqual(result["significant_sdc_target"].tolist(), [0, 0])
 
+    def test_negative_mask_includes_every_non_significant_execution(self):
+        frame = pd.DataFrame(
+            {
+                "significant_sdc_target": [0, 0, 0, 1],
+                "injected": [0, 1, 1, 1],
+                "is_sdc": [0, 0, 1, 1],
+            }
+        )
+
+        self.assertEqual(
+            significant_sdc_negative_mask(frame).tolist(),
+            [True, True, True, False],
+        )
+
     def test_metadata_and_targets_are_not_features(self):
         frame = pd.DataFrame(
             {
@@ -101,6 +118,38 @@ class XGBoostDetectorTest(unittest.TestCase):
     def test_unknown_xgboost_parameter_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "Unknown"):
             XGBoostConfig.from_mapping({"unknown": 1})
+
+    def test_threshold_calibration_respects_strict_fpr_budget(self):
+        calibration = calibrate_threshold_at_fpr(
+            [0.1, 0.2, 0.3, 0.4, 0.5] * 20,
+            target_fpr=0.01,
+        )
+
+        self.assertLessEqual(calibration["achieved_fpr"], 0.01)
+        self.assertEqual(
+            calibration["comparison"],
+            "positive_probability > threshold",
+        )
+
+    def test_threshold_calibration_maximizes_f1(self):
+        calibration = calibrate_threshold_max_f1(
+            [0.1, 0.2, 0.8, 0.9],
+            [0, 0, 1, 1],
+        )
+
+        self.assertEqual(calibration["strategy"], "maximize_f1")
+        self.assertEqual(calibration["threshold"], 0.2)
+        self.assertEqual(calibration["calibration_f1"], 1.0)
+        self.assertEqual(calibration["calibration_fpr"], 0.0)
+
+    def test_max_f1_tie_uses_highest_threshold(self):
+        calibration = calibrate_threshold_max_f1(
+            [0.6, 0.7, 0.8, 0.9],
+            [1, 0, 0, 1],
+        )
+
+        self.assertEqual(calibration["threshold"], 0.8)
+        self.assertEqual(calibration["tie_breaker"], "highest_threshold")
 
 
 if __name__ == "__main__":

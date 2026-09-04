@@ -31,12 +31,14 @@ class _FakeDataset:
         samples = [
             DatasetSample(
                 orig_id="stable-a",
+                semantic_group_id="group-a",
                 question="Question A",
                 ground_truth="Answer A",
                 image="image-a",
             ),
             DatasetSample(
                 orig_id="stable-b",
+                semantic_group_id="group-b",
                 question="Question B",
                 ground_truth="Answer B",
                 image="image-b",
@@ -83,9 +85,26 @@ class _FakeProfiler:
     def finalize(self):
         pass
 
-    def save_attn_proj_interlayer_jsonl(self, path, sample_id=None):
+    def save_attn_proj_interlayer_jsonl(
+        self,
+        path,
+        sample_id=None,
+        orig_id=None,
+        semantic_group_id=None,
+        split=None,
+    ):
         with Path(path).open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps({"sample_id": sample_id}) + "\n")
+            stream.write(
+                json.dumps(
+                    {
+                        "sample_id": sample_id,
+                        "orig_id": orig_id,
+                        "semantic_group_id": semantic_group_id,
+                        "split": split,
+                    }
+                )
+                + "\n"
+            )
         return 1
 
     def get_attn_proj_model_compare_result(
@@ -94,6 +113,7 @@ class _FakeProfiler:
         predictor_model,
         device,
         include_vectors,
+        max_steps=None,
     ):
         return {
             "device": device,
@@ -135,10 +155,16 @@ class _FakeInjector:
     def set_num_bits(self, num_bits):
         self.num_bits = num_bits
 
+    def set_bit_policy(self, bit_policy):
+        self.bit_policy = bit_policy
+
     def inject(self):
         type(self).inject_count += 1
         self.model.fault_active = type(self).inject_count == 1
-        self.fault_info = {"bit_positions": list(range(self.num_bits))}
+        self.fault_info = {
+            "bit_positions": list(range(self.num_bits)),
+            "bit_policy": self.bit_policy,
+        }
 
     def unregister_hooks(self):
         self.model.fault_active = False
@@ -147,7 +173,33 @@ class _FakeInjector:
 class _AlwaysFaultInjector(_FakeInjector):
     def inject(self):
         self.model.fault_active = True
-        self.fault_info = {"bit_positions": list(range(self.num_bits))}
+        self.fault_info = {
+            "bit_positions": list(range(self.num_bits)),
+            "bit_policy": self.bit_policy,
+        }
+
+
+class _NoOpInjector(_FakeInjector):
+    def inject(self):
+        self.model.fault_active = False
+        self.fault_info = None
+
+
+class _AuxiliaryMonitor:
+    def __init__(self, model):
+        self.model = model
+
+    def register(self):
+        pass
+
+    def unregister(self):
+        pass
+
+    def start_sample(self):
+        pass
+
+    def finish_sample(self):
+        return {"trace": 1}
 
 
 class PipelineTest(unittest.TestCase):
@@ -177,6 +229,9 @@ class PipelineTest(unittest.TestCase):
             "llava15_earthvqa",
             "llava15_lingoqa",
             "llava15_vqav2",
+            "internvl3_earthvqa",
+            "internvl3_lingoqa",
+            "internvl3_vqav2",
         )
 
         jobs = [
@@ -194,11 +249,16 @@ class PipelineTest(unittest.TestCase):
         self.assertTrue(all(job.paths.labeled_output.name == "labels.jsonl" for job in jobs))
         self.assertEqual(jobs[1].projection_method, "project")
         self.assertEqual(jobs[4].projection_method, "project")
-        self.assertEqual(jobs[4].profiler_seed, 1234)
+        self.assertEqual(jobs[4].profiler_seed, 42)
         self.assertEqual(jobs[0].injection_config["fault_runs"], 10)
+        self.assertEqual(jobs[0].injection_config["bit_policy"], "random")
         self.assertEqual(
             jobs[4].injection_config["mapping_kwargs"]["hidden_dim"],
-            1024,
+            64,
+        )
+        self.assertEqual(
+            jobs[4].injection_config["mapping_kwargs"]["num_blocks"],
+            8,
         )
 
     def test_mapping_collection_is_atomic_and_uses_shared_lifecycle(self):
@@ -224,7 +284,17 @@ class PipelineTest(unittest.TestCase):
             ]
 
         profiler = _FakeProfiler.last_instance
-        self.assertEqual(rows, [{"sample_id": 0}])
+        self.assertEqual(
+            rows,
+            [
+                {
+                    "sample_id": 0,
+                    "orig_id": "stable-a",
+                    "semantic_group_id": "group-a",
+                    "split": "fit",
+                }
+            ],
+        )
         self.assertEqual(summary["samples"], 1)
         self.assertEqual(summary["mapping_rows"], 1)
         self.assertEqual(profiler.reset_count, 1)
@@ -232,7 +302,7 @@ class PipelineTest(unittest.TestCase):
         self.assertTrue(profiler.unregistered)
         self.assertTrue(model.closed)
 
-    def test_injection_stage_uses_one_model_load_and_atomic_filtering(self):
+    def test_injection_stage_retains_every_fault_run_atomically(self):
         model = _FakeModel()
         model.fault_active = False
         original_generate = model.generate
@@ -267,11 +337,14 @@ class PipelineTest(unittest.TestCase):
                 projection_method="project",
                 profiler_seed=42,
                 fault_runs=2,
-                retain_all_fault_runs=1,
                 num_bits=2,
                 fault_seed=42,
                 profiler_factory=_FakeProfiler,
                 injector_factory=_FakeInjector,
+                auxiliary_monitor_factory=_AuxiliaryMonitor,
+                auxiliary_scorer=lambda trace: {
+                    "ranger_score": float(trace["trace"])
+                },
             )
             rows = [
                 json.loads(line)
@@ -279,15 +352,63 @@ class PipelineTest(unittest.TestCase):
             ]
 
         self.assertEqual(summary["generated"], 3)
-        self.assertEqual(summary["rows_written"], 2)
+        self.assertEqual(summary["rows_written"], 3)
         self.assertEqual(summary["sdc_rows_observed"], 1)
-        self.assertEqual([row["injected"] for row in rows], [False, True])
+        self.assertEqual(
+            [row["injected"] for row in rows],
+            [False, True, True],
+        )
         self.assertEqual(
             [row["sample_uid"] for row in rows],
-            ["stable-a:clean", "stable-a:fault:0"],
+            [
+                "stable-a:clean",
+                "stable-a:fault:0",
+                "stable-a:fault:1",
+            ],
         )
         self.assertEqual(rows[1]["is_sdc"], 1)
+        self.assertEqual(rows[2]["is_sdc"], 0)
+        self.assertTrue(all(row["ranger_score"] == 1.0 for row in rows))
+        self.assertEqual(summary["retention_policy"], "all_runs")
+        self.assertEqual(summary["bit_policy"], "random")
+        self.assertEqual(rows[1]["fault"]["bit_policy"], "random")
         self.assertTrue(model.closed)
+
+    def test_injection_rejects_a_fault_hook_that_never_fires(self):
+        model = _FakeModel()
+        model.fault_active = False
+        clean = CleanAnswerIndex(
+            by_sequence={0: "Question A:image-a:12"},
+            by_orig_id={},
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "injected.jsonl"
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "fault hook did not inject",
+            ):
+                run_injection_samples(
+                    model,
+                    _FakeDataset(),
+                    _FakeMappingModel(),
+                    clean,
+                    output,
+                    device="cpu",
+                    max_samples=1,
+                    max_new_tokens=12,
+                    projection_dim=64,
+                    projection_method="project",
+                    profiler_seed=42,
+                    fault_runs=1,
+                    num_bits=2,
+                    fault_seed=42,
+                    profiler_factory=_FakeProfiler,
+                    injector_factory=_NoOpInjector,
+                )
+
+            self.assertFalse(output.exists())
+            self.assertFalse(output.with_name("injected.jsonl.tmp").exists())
 
     def test_injection_resume_restarts_interrupted_run(self):
         model = _FakeModel()
@@ -349,7 +470,6 @@ class PipelineTest(unittest.TestCase):
                 projection_method="project",
                 profiler_seed=42,
                 fault_runs=3,
-                retain_all_fault_runs=1,
                 num_bits=2,
                 fault_seed=42,
                 resume_from_run=1,
@@ -383,6 +503,9 @@ class PipelineTest(unittest.TestCase):
             "llava15_earthvqa",
             "llava15_lingoqa",
             "llava15_vqav2",
+            "internvl3_earthvqa",
+            "internvl3_lingoqa",
+            "internvl3_vqav2",
         )
         for name in names:
             job = load_pipeline_job(

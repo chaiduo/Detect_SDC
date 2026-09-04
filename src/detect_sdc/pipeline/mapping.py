@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Callable, Mapping
@@ -10,8 +11,10 @@ from ..adapters import load_dataset_adapter, load_model_adapter
 from ..adapters.datasets.base import DatasetAdapter
 from ..adapters.models.base import ModelAdapter
 from ..adapters.registry import import_symbol
+from ..dataset_splits import DatasetSplitManifest
 from ..profiler import Profiler
 from .jobs import load_pipeline_job
+from .split import load_configured_split_manifest
 
 
 ProfilerFactory = Callable[..., Any]
@@ -29,6 +32,8 @@ def collect_mapping_samples(
     projection_dim: int,
     projection_method: str,
     seed: int,
+    split_manifest: DatasetSplitManifest | None = None,
+    selected_split: str = "fit",
     overwrite: bool = False,
     profiler_factory: ProfilerFactory = Profiler,
 ) -> dict[str, Any]:
@@ -49,6 +54,7 @@ def collect_mapping_samples(
 
     profiler = None
     samples = 0
+    scanned_samples = 0
     mapping_rows = 0
     try:
         model_adapter.load(device)
@@ -62,6 +68,28 @@ def collect_mapping_samples(
         for sequence_id, sample in enumerate(
             dataset_adapter.iter_samples(max_samples=max_samples)
         ):
+            scanned_samples += 1
+            assignment = (
+                None
+                if split_manifest is None
+                else split_manifest.assignment_for_orig_id(sample.orig_id)
+            )
+            if assignment is not None:
+                if assignment.sequence_id != sequence_id:
+                    raise ValueError(
+                        "Dataset iteration order differs from split manifest "
+                        f"for {sample.orig_id}"
+                    )
+                if (
+                    assignment.semantic_group_id
+                    != sample.semantic_group_id
+                ):
+                    raise ValueError(
+                        "Dataset semantic_group_id differs from split "
+                        f"manifest for {sample.orig_id}"
+                    )
+                if assignment.split != selected_split:
+                    continue
             model_adapter.generate(
                 sample.question,
                 sample.image,
@@ -72,6 +100,13 @@ def collect_mapping_samples(
                 profiler.save_attn_proj_interlayer_jsonl(
                     str(temporary),
                     sample_id=sequence_id,
+                    orig_id=sample.orig_id,
+                    semantic_group_id=sample.semantic_group_id,
+                    split=(
+                        selected_split
+                        if assignment is None
+                        else assignment.split
+                    ),
                 )
             )
             profiler.reset(clear_stats=True)
@@ -87,6 +122,8 @@ def collect_mapping_samples(
     temporary.replace(destination)
     return {
         "samples": samples,
+        "scanned_samples": scanned_samples,
+        "selected_split": selected_split,
         "mapping_rows": mapping_rows,
         "projection_dim": projection_dim,
         "projection_method": projection_method,
@@ -111,6 +148,10 @@ def run_mapping_job(
         job_name,
         repository_root=repository_root,
     )
+    split_manifest = load_configured_split_manifest(
+        job.dataset_config,
+        repository_root=repository_root,
+    )
     summary = collect_mapping_samples(
         load_model_adapter(job.model_config_path),
         load_dataset_adapter(job.dataset_config_path),
@@ -123,6 +164,8 @@ def run_mapping_job(
         projection_dim=job.projection_dim,
         projection_method=job.projection_method,
         seed=job.profiler_seed,
+        split_manifest=split_manifest,
+        selected_split="fit",
         overwrite=overwrite,
     )
     summary.update(
@@ -233,8 +276,40 @@ def run_mapping_training_job(
             "trainer": str(config["trainer"]),
         }
     )
+    split_manifest = load_configured_split_manifest(
+        job.dataset_config,
+        repository_root=repository_root,
+    )
+    metadata_path = job.paths.mapping_model.with_suffix(".metadata.json")
+    metadata = {
+        **summary,
+        "mapping_architecture": dict(mapping_kwargs),
+        "training_parameters": dict(configured_kwargs),
+        "mapping_data_sha256": _sha256_file(job.paths.mapping_data),
+        "checkpoint_sha256": _sha256_file(job.paths.mapping_model),
+        "split_assignment_sha256": split_manifest.assignment_sha256,
+    }
+    _atomic_write_json(metadata_path, metadata)
+    summary["metadata"] = str(metadata_path)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return summary
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(8 * 1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _atomic_write_json(path: Path, value: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(f"{path.suffix}.tmp")
+    with temporary.open("w", encoding="utf-8") as stream:
+        json.dump(_json_safe(value), stream, ensure_ascii=False, indent=2)
+        stream.write("\n")
+    temporary.replace(path)
 
 
 def _json_safe(value: Any) -> Any:

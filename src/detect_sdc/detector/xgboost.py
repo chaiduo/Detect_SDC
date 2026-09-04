@@ -34,7 +34,16 @@ CLASS_NAMES = {
 }
 EXCLUDED_COLUMNS = {
     "orig_id",
+    "semantic_group_id",
+    "split",
     "sample_uid",
+    "injected",
+    "run_index",
+    "is_sdc",
+    "fault_component",
+    "fault_layer_index",
+    "fault_op_type",
+    "fault_bit_categories",
     "label",
     "significance",
     "ternary_target",
@@ -121,6 +130,19 @@ def add_significant_sdc_target(frame: pd.DataFrame) -> pd.DataFrame:
     result = frame.copy()
     result["significant_sdc_target"] = target
     return result
+
+
+def significant_sdc_negative_mask(frame: pd.DataFrame) -> pd.Series:
+    """Return the negative class for Significant-SDC calibration/evaluation."""
+    if "significant_sdc_target" not in frame.columns:
+        raise ValueError("Frame must contain significant_sdc_target")
+    target = pd.to_numeric(
+        frame["significant_sdc_target"],
+        errors="coerce",
+    )
+    if target.isna().any() or not set(target.astype(int).unique()).issubset({0, 1}):
+        raise ValueError("significant_sdc_target only supports 0/1")
+    return target.astype(int).eq(0)
 
 
 def get_feature_columns(frame: pd.DataFrame) -> list[str]:
@@ -255,6 +277,38 @@ def binary_metrics(
 ) -> dict[str, Any]:
     truth = np.asarray(y_true, dtype=int)
     prediction = np.asarray(y_pred, dtype=int)
+    if not len(truth):
+        empty_class = {
+            "support": 0,
+            "pred_total": 0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "tn": 0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "false_positive_rate": 0.0,
+            "f1": 0.0,
+            "prob_mean": None,
+        }
+        per_class = {
+            str(label): {"name": CLASS_NAMES[label], **empty_class}
+            for label in CLASS_LABELS
+        }
+        return {
+            "confusion_matrix": [[0, 0], [0, 0]],
+            "accuracy": 0.0,
+            "per_class": per_class,
+            "classification_report": {},
+            "target_class_1": per_class["1"],
+            "target_significant_sdc": per_class["1"],
+            "macro_precision": 0.0,
+            "macro_recall": 0.0,
+            "macro_f1": 0.0,
+            "weighted_precision": 0.0,
+            "weighted_recall": 0.0,
+            "weighted_f1": 0.0,
+        }
     matrix = confusion_matrix(truth, prediction, labels=CLASS_LABELS)
     report = classification_report(
         truth,
@@ -285,6 +339,11 @@ def binary_metrics(
             if predicted_total
             else 0.0,
             "recall": float(true_positive / support) if support else 0.0,
+            "false_positive_rate": float(
+                (~true_mask & predicted_mask).sum() / (~true_mask).sum()
+            )
+            if (~true_mask).sum()
+            else 0.0,
             "f1": float(report[name]["f1-score"]),
             "prob_mean": float(np.mean(y_probability[:, label]))
             if len(y_probability)
@@ -330,115 +389,244 @@ def binary_metrics(
     return metrics
 
 
-def run_xgboost(
-    train_csv: str | Path,
-    valid_csv: str | Path,
+def calibrate_threshold_at_fpr(
+    non_sdc_scores: Any,
+    *,
+    target_fpr: float,
+) -> dict[str, Any]:
+    """Choose the lowest strict-greater-than threshold within an FPR budget."""
+
+    if not 0.0 <= target_fpr < 1.0:
+        raise ValueError("target_fpr must be in [0, 1)")
+    scores = np.asarray(non_sdc_scores, dtype=float)
+    if scores.ndim != 1 or not len(scores):
+        raise ValueError("Calibration requires injected Non-SDC scores")
+    if not np.isfinite(scores).all():
+        raise ValueError("Calibration probabilities must be finite")
+
+    allowed = int(np.floor(target_fpr * len(scores)))
+    if allowed <= 0:
+        threshold = float(scores.max())
+    elif allowed >= len(scores):
+        threshold = float("-inf")
+    else:
+        descending = np.sort(scores)[::-1]
+        threshold = float(descending[allowed])
+    predicted = scores > threshold
+    return {
+        "threshold": threshold,
+        "target_fpr": float(target_fpr),
+        "achieved_fpr": float(predicted.mean()),
+        "negative_samples": int(len(scores)),
+        "allowed_false_positives": allowed,
+        "observed_false_positives": int(predicted.sum()),
+        "comparison": "positive_probability > threshold",
+    }
+
+
+def calibrate_threshold_max_f1(scores: Any, targets: Any) -> dict[str, Any]:
+    """Select the strict-greater-than threshold maximizing calibration F1."""
+
+    values = np.asarray(scores, dtype=float)
+    truth = np.asarray(targets, dtype=int)
+    if values.ndim != 1 or not len(values):
+        raise ValueError("Calibration scores must be a non-empty vector")
+    if truth.ndim != 1 or len(truth) != len(values):
+        raise ValueError("Calibration targets must match calibration scores")
+    if np.isnan(values).any():
+        raise ValueError("Calibration scores contain NaN")
+    if not set(np.unique(truth)).issubset({0, 1}):
+        raise ValueError("Calibration targets only support 0/1")
+
+    positive_samples = int(truth.sum())
+    negative_samples = int(len(truth) - positive_samples)
+    if positive_samples == 0 or negative_samples == 0:
+        raise ValueError("Calibration requires both target classes")
+
+    forced = np.isposinf(values)
+    true_positive = int(np.sum(forced & (truth == 1)))
+    false_positive = int(np.sum(forced & (truth == 0)))
+    best: dict[str, Any] | None = None
+
+    def consider(threshold: float) -> None:
+        nonlocal best
+        predicted_positive = true_positive + false_positive
+        precision = (
+            float(true_positive / predicted_positive)
+            if predicted_positive
+            else 0.0
+        )
+        recall = float(true_positive / positive_samples)
+        f1 = (
+            0.0
+            if precision + recall == 0.0
+            else float(2.0 * precision * recall / (precision + recall))
+        )
+        candidate = {
+            "strategy": "maximize_f1",
+            "threshold": float(threshold),
+            "calibration_precision": precision,
+            "calibration_recall": recall,
+            "calibration_f1": f1,
+            "calibration_fpr": float(false_positive / negative_samples),
+            "samples": int(len(values)),
+            "positive_samples": positive_samples,
+            "negative_samples": negative_samples,
+            "predicted_positive": predicted_positive,
+            "tie_breaker": "highest_threshold",
+            "comparison": "score > threshold; positive infinity always detected",
+        }
+        if best is None or f1 > best["calibration_f1"]:
+            best = candidate
+
+    consider(float("inf"))
+    finite_mask = np.isfinite(values)
+    finite_values = values[finite_mask]
+    finite_targets = truth[finite_mask]
+    order = np.argsort(finite_values)[::-1]
+    finite_values = finite_values[order]
+    finite_targets = finite_targets[order]
+    index = 0
+    while index < len(finite_values):
+        value = finite_values[index]
+        consider(float(value))
+        group_end = index + 1
+        while (
+            group_end < len(finite_values)
+            and finite_values[group_end] == value
+        ):
+            group_end += 1
+        group_targets = finite_targets[index:group_end]
+        true_positive += int(np.sum(group_targets == 1))
+        false_positive += int(np.sum(group_targets == 0))
+        index = group_end
+    consider(float("-inf"))
+    assert best is not None
+    return best
+
+
+def run_calibrated_xgboost(
+    fit_csv: str | Path,
+    calibration_csv: str | Path,
+    test_csv: str | Path,
     output_dir: str | Path,
     *,
-    group_column: str = "orig_id",
+    group_column: str = "semantic_group_id",
     config: XGBoostConfig | None = None,
-    clean_output: bool = True,
 ) -> dict[str, Any]:
+    """Train on Fit, calibrate one threshold, and evaluate untouched Test."""
+
     detector_config = config or XGBoostConfig()
-    train_path = Path(train_csv).resolve()
-    valid_path = Path(valid_csv).resolve()
+    paths = {
+        "fit": Path(fit_csv).resolve(),
+        "calibration": Path(calibration_csv).resolve(),
+        "test": Path(test_csv).resolve(),
+    }
     destination = Path(output_dir).resolve()
-    if clean_output:
-        _clean_output_directory(destination)
-    else:
-        destination.mkdir(parents=True, exist_ok=True)
+    _clean_output_directory(destination)
+    frames = {
+        name: add_significant_sdc_target(pd.read_csv(path))
+        for name, path in paths.items()
+    }
+    _validate_external_splits(frames, group_column=group_column)
 
-    train_full = add_significant_sdc_target(pd.read_csv(train_path))
-    valid_full = add_significant_sdc_target(pd.read_csv(valid_path))
-    feature_columns = get_feature_columns(train_full)
-    missing_valid_features = sorted(set(feature_columns) - set(valid_full.columns))
-    if missing_valid_features:
-        raise ValueError(f"Validation CSV is missing features: {missing_valid_features}")
+    fit = frames["fit"]
+    calibration = frames["calibration"]
+    test = frames["test"]
+    feature_columns = get_feature_columns(fit)
+    for name, frame in frames.items():
+        missing = sorted(set(feature_columns) - set(frame.columns))
+        if missing:
+            raise ValueError(f"{name} CSV is missing features: {missing}")
 
-    train_nan_mask = all_feature_nan_mask(train_full, feature_columns)
-    valid_nan_mask = all_feature_nan_mask(valid_full, feature_columns)
     grouped = split_by_group(
-        train_full,
+        fit,
         group_column=group_column,
         holdout_ratio=detector_config.test_ratio,
         random_state=detector_config.random_state,
     )
-    train = grouped.train
-    test = grouped.holdout
-    valid_non_all_nan = valid_full.loc[~valid_nan_mask].copy()
-
-    x_train = prepare_features(train, feature_columns)
-    x_test = prepare_features(test, feature_columns)
-    y_train = train["significant_sdc_target"].astype(int)
-    y_test = test["significant_sdc_target"].astype(int)
     model, training = train_binary_model(
-        x_train,
-        y_train,
-        x_test,
-        y_test,
+        prepare_features(grouped.train, feature_columns),
+        grouped.train["significant_sdc_target"].astype(int),
+        prepare_features(grouped.holdout, feature_columns),
+        grouped.holdout["significant_sdc_target"].astype(int),
         config=detector_config,
     )
 
+    calibration_probability = model.predict_proba(
+        prepare_features(calibration, feature_columns)
+    )[:, 1]
+    threshold = calibrate_threshold_max_f1(
+        calibration_probability,
+        calibration["significant_sdc_target"].astype(int),
+    )
+    selected_threshold = float(threshold["threshold"])
+
+    test_nan_mask = all_feature_nan_mask(test, feature_columns)
+    cohorts = {
+        "test_full": test,
+        "test_finite": test.loc[~test_nan_mask].copy(),
+        "test_clean": test.loc[test["injected"].astype(int).eq(0)].copy(),
+        "test_injected_non_sdc": test.loc[
+            test["injected"].astype(int).eq(1)
+            & test["is_sdc"].astype(int).eq(0)
+        ].copy(),
+        "test_slight_sdc": test.loc[
+            test["injected"].astype(int).eq(1)
+            & test["is_sdc"].astype(int).eq(1)
+            & test["significant_sdc_target"].astype(int).eq(0)
+        ].copy(),
+        "test_significant_sdc": test.loc[
+            test["significant_sdc_target"].astype(int).eq(1)
+        ].copy(),
+    }
+    metrics = {
+        name: _evaluate(
+            model,
+            frame,
+            prepare_features(frame, feature_columns),
+            frame["significant_sdc_target"].astype(int),
+            destination,
+            name,
+            threshold=selected_threshold,
+        )
+        for name, frame in cohorts.items()
+    }
+
+    model_path = destination / "significant_sdc_detector.ubj"
+    booster = model.get_booster()
+    best_iteration = training.get("best_iteration")
+    if best_iteration is not None:
+        booster = booster[: int(best_iteration) + 1]
+    booster.save_model(model_path)
     summary = {
-        "train_csv": str(train_path),
-        "valid_csv": str(valid_path),
-        "group_col": group_column,
         "task_type": "binary_significant_sdc",
-        "class_names": CLASS_NAMES,
-        "target_definition": {
-            "0": "pred_answer == clean_answer or significance in {0, 1}",
-            "1": "pred_answer != clean_answer and significance == 2",
-        },
+        "protocol": "fit_calibration_final_test",
+        "input_csvs": {name: str(path) for name, path in paths.items()},
+        "group_column": group_column,
+        "external_split_group_overlap": 0,
         "feature_count": len(feature_columns),
         "feature_columns": feature_columns,
-        "all_feature_nan_filter_stats": {
-            "training_policy": "keep_all_feature_nan",
-            "drop_all_feature_nan_for_training": False,
-            "train_all_feature_nan": int(train_nan_mask.sum()),
-            "valid_all_feature_nan": int(valid_nan_mask.sum()),
-            "train_all_feature_nan_label_significance_counts": (
-                label_significance_counts(train_full.loc[train_nan_mask])
-            ),
-            "valid_all_feature_nan_label_significance_counts": (
-                label_significance_counts(valid_full.loc[valid_nan_mask])
-            ),
+        "fit_internal_split": grouped.summary.to_dict(),
+        "training": training,
+        "threshold_calibration": threshold,
+        "calibration_objective": "maximize significant_sdc_target F1",
+        "calibration_negative_definition": "significant_sdc_target == 0",
+        "target_definition": {
+            "0": "non-significant execution",
+            "1": "pred_answer != clean_answer and significance == 2",
         },
-        "group_split": grouped.summary.to_dict(),
-        "train_full_label_significance_counts": label_significance_counts(train_full),
-        "valid_full_label_significance_counts": label_significance_counts(valid_full),
-        "train_rows_used": int(len(train_full)),
-        "test_rows": int(len(test)),
-        "valid_full_rows": int(len(valid_full)),
-        "valid_non_all_nan_rows": int(len(valid_non_all_nan)),
-        "train_info": training,
-        "test_metrics": _evaluate(
-            model,
-            test,
-            x_test,
-            y_test,
-            destination,
-            "test",
-        ),
-        "valid_full_metrics": _evaluate(
-            model,
-            valid_full,
-            prepare_features(valid_full, feature_columns),
-            valid_full["significant_sdc_target"].astype(int),
-            destination,
-            "valid_full",
-        ),
-        "valid_non_all_nan_metrics": _evaluate(
-            model,
-            valid_non_all_nan,
-            prepare_features(valid_non_all_nan, feature_columns),
-            valid_non_all_nan["significant_sdc_target"].astype(int),
-            destination,
-            "valid_non_all_nan",
-        ),
+        "cohort_rows": {
+            name: int(len(frame)) for name, frame in cohorts.items()
+        },
+        "test_all_feature_nan": int(test_nan_mask.sum()),
+        "metrics": metrics,
+        "model_path": str(model_path),
+        "inference_tree_count": booster.num_boosted_rounds(),
         "feature_importance_top20": _feature_importance(
-            model,
+            booster,
             feature_columns,
-            destination / "significant_sdc_binary_feature_importance.csv",
+            destination / "significant_sdc_feature_importance.csv",
         ),
     }
     _atomic_write_json(destination / "metrics_summary.json", summary)
@@ -465,35 +653,27 @@ def run_detector_job(
     by_model = _require_mapping(xgboost_config.get("by_model"), "xgboost.by_model")
     common.update(_require_mapping(by_model.get(feature_job.model), feature_job.model))
 
+    calibration_config = _require_mapping(
+        detector.get("calibration"),
+        "detector.calibration",
+    )
+    if calibration_config.get("strategy") != "maximize_f1":
+        raise ValueError("detector.calibration.strategy must be maximize_f1")
     destination = (
         Path(output_dir).resolve()
         if output_dir
-        else feature_job.train_output.parent.parent / "output"
+        else feature_job.fit_output.parent.parent / "output"
     )
-    _clean_output_directory(destination)
-    model_output = destination / "train_with_nan"
-    summary = run_xgboost(
-        feature_job.train_output,
-        feature_job.valid_output,
-        model_output,
+    summary = run_calibrated_xgboost(
+        feature_job.fit_output,
+        feature_job.calibration_output,
+        feature_job.test_output,
+        destination,
         group_column=feature_job.group_column,
         config=XGBoostConfig.from_mapping(common),
-        clean_output=False,
     )
-    combined = {
-        "train_csv": str(feature_job.train_output),
-        "valid_csv": str(feature_job.valid_output),
-        "group_col": feature_job.group_column,
-        "training_nan_policy": "keep_all_feature_nan",
-        "evaluation_splits": [
-            "valid_full_metrics",
-            "valid_non_all_nan_metrics",
-        ],
-        "model_summary": summary,
-    }
-    _atomic_write_json(destination / "metrics_summary.json", combined)
     print(f"Saved metrics summary to: {destination / 'metrics_summary.json'}")
-    return combined
+    return summary
 
 
 def _evaluate(
@@ -503,10 +683,15 @@ def _evaluate(
     target: Any,
     output_dir: Path,
     split_name: str,
+    *,
+    threshold: float = 0.5,
 ) -> dict[str, Any]:
     if len(frame):
         probability = model.predict_proba(features)
-        prediction = np.argmax(probability, axis=1).astype(int)
+        scores = probability[:, 1]
+        prediction = (
+            np.isposinf(scores) | (scores > threshold)
+        ).astype(int)
     else:
         probability = np.empty((0, len(CLASS_LABELS)), dtype=float)
         prediction = np.asarray([], dtype=int)
@@ -517,9 +702,43 @@ def _evaluate(
         {
             "prediction_files": files,
             "label_significance_counts": label_significance_counts(frame),
+            "threshold": threshold,
         }
     )
     return metrics
+
+
+def _validate_external_splits(
+    frames: Mapping[str, pd.DataFrame],
+    *,
+    group_column: str,
+) -> None:
+    expected = {"fit", "calibration", "test"}
+    if set(frames) != expected:
+        raise ValueError(f"Expected external splits {sorted(expected)}")
+    group_sets: dict[str, set[str]] = {}
+    uid_sets: dict[str, set[str]] = {}
+    for name, frame in frames.items():
+        for column in (group_column, "sample_uid", "injected", "is_sdc"):
+            if column not in frame.columns:
+                raise ValueError(f"{name} CSV is missing column: {column}")
+        if frame.empty:
+            raise ValueError(f"{name} CSV must not be empty")
+        group_sets[name] = set(frame[group_column].astype(str))
+        uid_sets[name] = set(frame["sample_uid"].astype(str))
+    for left, right in (
+        ("fit", "calibration"),
+        ("fit", "test"),
+        ("calibration", "test"),
+    ):
+        if group_sets[left] & group_sets[right]:
+            raise ValueError(
+                f"{group_column} overlap between {left} and {right}"
+            )
+        if uid_sets[left] & uid_sets[right]:
+            raise ValueError(
+                f"sample_uid overlap between {left} and {right}"
+            )
 
 
 def _save_predictions(
@@ -555,13 +774,17 @@ def _save_predictions(
 
 
 def _feature_importance(
-    model: XGBClassifier,
+    model: Any,
     feature_columns: list[str],
     output_path: Path,
 ) -> list[dict[str, Any]] | None:
-    importances = getattr(model, "feature_importances_", None)
-    if importances is None:
-        return None
+    if hasattr(model, "get_score"):
+        scores = model.get_score(importance_type="gain")
+        importances = [float(scores.get(column, 0.0)) for column in feature_columns]
+    else:
+        importances = getattr(model, "feature_importances_", None)
+        if importances is None:
+            return None
     frame = pd.DataFrame(
         {"feature": feature_columns, "importance": importances}
     ).sort_values("importance", ascending=False)
@@ -572,7 +795,12 @@ def _feature_importance(
 def _clean_output_directory(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
     for candidate in path.rglob("*"):
-        if candidate.is_file() and candidate.suffix in {".csv", ".json", ".png"}:
+        if candidate.is_file() and candidate.suffix in {
+            ".csv",
+            ".json",
+            ".png",
+            ".ubj",
+        }:
             candidate.unlink()
 
 

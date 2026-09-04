@@ -1,5 +1,8 @@
 # 差异特征组消融实验
 
+> **历史 ICLR-v1 结果**：本页数值使用旧 split 和 Detector 协议，仅供回归参考；v2 正式重跑后需整体替换。
+
+
 ## 实验设置
 
 SIEVE 的 72 维 Discrepancy Representation 由四类差异指标组成：

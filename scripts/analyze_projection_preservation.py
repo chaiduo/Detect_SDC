@@ -501,7 +501,7 @@ def _parse_args() -> argparse.Namespace:
         type=Path,
         default=(
             REPOSITORY_ROOT
-            / "analysis/qwen_lingoqa_projection_preservation.json"
+            / "analysis/iclr_v2/qwen_lingoqa_projection_preservation.json"
         ),
     )
     parser.add_argument(

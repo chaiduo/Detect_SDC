@@ -204,7 +204,7 @@ def plot(jobs: list[Job], counts: dict[str, Counts | None], output: Path, dpi: i
                 "Times",
                 "DejaVu Serif",
             ],
-            "font.size": 6.5,
+            "font.size": 8.5,
             "font.weight": "normal",
             "axes.edgecolor": "black",
             "axes.linewidth": 0.7,
@@ -227,7 +227,7 @@ def plot(jobs: list[Job], counts: dict[str, Counts | None], output: Path, dpi: i
     positions = list(range(len(models)))
     width = 0.21
 
-    figure, axis = plt.subplots(figsize=(3.35, 2.05))
+    figure, axis = plt.subplots(figsize=(3.35, 2.35))
     maximum = 0.0
     for dataset_index, dataset in enumerate(datasets):
         offsets = [
@@ -261,7 +261,7 @@ def plot(jobs: list[Job], counts: dict[str, Counts | None], output: Path, dpi: i
                 f"{item.percentage:.0f}%",
                 ha="center",
                 va="bottom",
-                fontsize=5.5,
+                fontsize=7.0,
             )
 
     axis.set_ylabel("Significant SDC (%)", labelpad=1)
@@ -286,7 +286,7 @@ def plot(jobs: list[Job], counts: dict[str, Counts | None], output: Path, dpi: i
         width=0.7,
         top=True,
         right=True,
-        labelsize=5.8,
+        labelsize=7.5,
     )
 
     legend = axis.legend(
@@ -295,7 +295,7 @@ def plot(jobs: list[Job], counts: dict[str, Counts | None], output: Path, dpi: i
         fancybox=False,
         edgecolor="black",
         framealpha=1.0,
-        fontsize=5.8,
+        fontsize=7.5,
         handlelength=1.2,
         columnspacing=0.9,
         borderpad=0.25,
@@ -304,7 +304,7 @@ def plot(jobs: list[Job], counts: dict[str, Counts | None], output: Path, dpi: i
         borderaxespad=0,
     )
     legend.get_frame().set_linewidth(0.7)
-    figure.tight_layout(pad=0.25)
+    figure.tight_layout(pad=0.35)
     output.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(output, dpi=dpi)
     if output.suffix.lower() != ".pdf":

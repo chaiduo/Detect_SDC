@@ -31,7 +31,7 @@ DEFAULT_JOBS = (
 METRICS = (
     "sdc_recall",
     "significant_sdc_recall",
-    "non_sdc_fpr",
+    "non_significant_fpr",
     "significant_sdc_precision",
     "significant_sdc_f1",
 )
@@ -65,12 +65,7 @@ def main() -> int:
         job = load_pipeline_job(
             config.source_config, job_name, repository_root=root
         )
-        path = (
-            root
-            / "compare_experiment/results"
-            / job_name
-            / "evaluation/metrics.json"
-        )
+        path = config.results_root / job_name / "evaluation/metrics.json"
         summary = json.loads(path.read_text(encoding="utf-8"))
         for method, method_result in summary["methods"].items():
             for cohort, cohort_result in method_result["cohorts"].items():
@@ -107,7 +102,7 @@ def main() -> int:
     output_dir = (
         args.output_dir.resolve()
         if args.output_dir is not None
-        else root / "compare_experiment/results/summary"
+        else config.results_root / "summary"
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     _write_csv(output_dir / "detailed_metrics.csv", rows)

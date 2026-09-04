@@ -1,0 +1,23 @@
+name: earthvqa_smoke
+adapter: detect_sdc.adapters.datasets.earthvqa.EarthVQAAdapter
+format: json_with_image_paths
+
+paths:
+  annotations: /data01/cd_workspace/llm/EarthVQA/Train_QA.json
+  images: /data01/cd_workspace/llm/EarthVQA/Train/images_png
+
+selection:
+  question_type: Comprehensive Analysis
+  max_questions_per_image: 2
+
+sampling:
+  max_samples: 60
+  deterministic_order: true
+
+split:
+  manifest: splits/earthvqa_smoke_seed42.json
+  group_column: semantic_group_id
+  fit_ratio: 0.70
+  calibration_ratio: 0.15
+  test_ratio: 0.15
+  seed: 42

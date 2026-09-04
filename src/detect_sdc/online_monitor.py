@@ -30,6 +30,7 @@ class OnlineSieveMonitor:
         predictor: Any | None = None,
         detector: Any | None = None,
         detector_feature_columns: Sequence[str] | None = None,
+        detector_threshold: float = 0.5,
         feature_profile: str = "full",
     ) -> None:
         if mode not in ONLINE_MODES:
@@ -60,6 +61,7 @@ class OnlineSieveMonitor:
         self.predictor = predictor
         self.detector = detector
         self.detector_feature_columns = tuple(detector_feature_columns or ())
+        self.detector_threshold = float(detector_threshold)
         self.feature_profile = feature_profile
 
         self._handles: list[Any] = []
@@ -289,7 +291,9 @@ class OnlineSieveMonitor:
                 self.feature_vector.reshape(1, -1)
             )[0]
             self.detector_probability = float(probability[1])
-            self.detector_prediction = int(np.argmax(probability))
+            self.detector_prediction = int(
+                self.detector_probability > self.detector_threshold
+            )
         self._mark_ready()
 
     def _aggregate_features(

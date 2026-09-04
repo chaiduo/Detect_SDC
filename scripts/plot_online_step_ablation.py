@@ -15,9 +15,9 @@ import pandas as pd
 
 K_VALUES = (1, 2, 4, 8, 12, 16, 24, 32, 50)
 MODELS = (
-    ("Qwen2.5-VL-7B", "Qwen2.5-VL-7B", "#4C78A8", "o"),
-    ("InternVL3-8B", "InternVL3-8B", "#F58518", "s"),
-    ("LLaVA-1.5-7B", "llava-v1.5-7B", "#54A24B", "^"),
+    ("Qwen2.5-VL-7B", "qwen25_vl", "#4C78A8", "o"),
+    ("InternVL3-8B", "internvl3", "#F58518", "s"),
+    ("LLaVA-1.5-7B", "llava15", "#54A24B", "^"),
 )
 DATASETS = ("EarthVQA", "LingoQA", "VQAv2")
 
@@ -49,8 +49,8 @@ def load_results(root: Path) -> pd.DataFrame:
         for dataset in DATASETS:
             path = (
                 root
+                / "artifacts/iclr_v2/ablations/online_step"
                 / directory
-                / "online_step_ablation_20260814"
                 / dataset
                 / "summary.csv"
             )

@@ -9,6 +9,8 @@ from typing import Any, Mapping
 
 from .adapters.registry import import_symbol
 from .config import load_yaml
+from .dataset_splits import load_split_manifest
+from .fault_injector import FaultInjector
 from .pipeline import PipelineStage
 
 
@@ -22,6 +24,8 @@ class ExperimentMatrix:
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any]) -> "ExperimentMatrix":
+        if int(data.get("schema_version", -1)) != 2:
+            raise ValueError("Experiment configuration requires schema_version=2")
         name = str(data.get("name", "")).strip()
         if not name:
             raise ValueError("Experiment configuration requires a name")
@@ -95,6 +99,7 @@ def validate_experiment_configuration(
     experiment = load_experiment(config_path)
     experiment.validate_references(root)
     raw = load_yaml(config_path)
+    _validate_detector_config(raw)
     execution = _required_mapping(raw.get("execution"), "execution")
     jobs = _required_mapping(execution.get("jobs"), "execution.jobs")
 
@@ -111,7 +116,7 @@ def validate_experiment_configuration(
         )
         pair = (job.model_name, job.dataset_name)
         jobs_by_pair.setdefault(pair, []).append(job.name)
-        _validate_pipeline_job(job)
+        _validate_pipeline_job(job, repository_root=root)
         loaded_jobs.append(job)
 
     extras = set(jobs_by_pair) - expected_pairs
@@ -144,10 +149,21 @@ def _string_mapping(value: Any, name: str) -> dict[str, str]:
     return {str(key): str(item) for key, item in value.items()}
 
 
-def _validate_pipeline_job(job: Any) -> None:
+def _validate_detector_config(config: Mapping[str, Any]) -> None:
+    detector = _required_mapping(config.get("detector"), "detector")
+    calibration = _required_mapping(
+        detector.get("calibration"),
+        "detector.calibration",
+    )
+    if calibration.get("strategy") != "maximize_f1":
+        raise ValueError("detector.calibration.strategy must be maximize_f1")
+
+
+def _validate_pipeline_job(job: Any, *, repository_root: Path) -> None:
     _validate_adapter(job.model_config, "model")
     _validate_adapter(job.dataset_config, "dataset")
     _validate_input_paths(job)
+    _validate_dataset_split(job, repository_root=repository_root)
 
     if job.max_samples is not None and job.max_samples <= 0:
         raise ValueError(f"{job.name}: sampling.max_samples must be positive")
@@ -205,23 +221,38 @@ def _validate_pipeline_job(job: Any) -> None:
             f"{job.name}: mapping num_layers ({num_layers}) must equal "
             f"instrumentation.layer_count ({layer_count})"
         )
+    hidden_dim = _positive_int(
+        mapping_kwargs.get("hidden_dim"),
+        f"{job.name}: injection.mapping_kwargs.hidden_dim",
+    )
+    num_blocks = _positive_int(
+        mapping_kwargs.get("num_blocks"),
+        f"{job.name}: injection.mapping_kwargs.num_blocks",
+    )
+    if hidden_dim != 64 or num_blocks != 8:
+        raise ValueError(
+            f"{job.name}: canonical Mapping requires hidden_dim=64 and "
+            f"num_blocks=8, got {hidden_dim} and {num_blocks}"
+        )
 
-    fault_runs = _nonnegative_int(
+    _nonnegative_int(
         injection.get("fault_runs"),
         f"{job.name}: injection.fault_runs",
     )
-    retained_runs = _nonnegative_int(
-        injection.get("retain_all_fault_runs"),
-        f"{job.name}: injection.retain_all_fault_runs",
-    )
-    if retained_runs > fault_runs:
-        raise ValueError(
-            f"{job.name}: retain_all_fault_runs cannot exceed fault_runs"
-        )
     _positive_int(
         injection.get("num_bits"),
         f"{job.name}: injection.num_bits",
     )
+    bit_policy = _required_text(
+        injection,
+        "bit_policy",
+        f"{job.name}: injection",
+    )
+    if bit_policy not in FaultInjector.BIT_POLICIES:
+        raise ValueError(
+            f"{job.name}: injection.bit_policy must be one of "
+            f"{FaultInjector.BIT_POLICIES}, got {bit_policy!r}"
+        )
     _integer(injection.get("seed"), f"{job.name}: injection.seed")
 
     training = job.mapping_training_config
@@ -284,6 +315,45 @@ def _validate_input_paths(job: Any) -> None:
         )
 
 
+def _validate_dataset_split(job: Any, *, repository_root: Path) -> None:
+    split = _required_mapping(
+        job.dataset_config.get("split"),
+        f"{job.name}: dataset split",
+    )
+    if split.get("group_column") != "semantic_group_id":
+        raise ValueError(
+            f"{job.name}: split.group_column must be semantic_group_id"
+        )
+    ratios = (
+        float(split.get("fit_ratio", 0.0)),
+        float(split.get("calibration_ratio", 0.0)),
+        float(split.get("test_ratio", 0.0)),
+    )
+    if any(ratio <= 0.0 for ratio in ratios) or abs(sum(ratios) - 1.0) > 1e-12:
+        raise ValueError(
+            f"{job.name}: dataset split ratios must be positive and sum to one"
+        )
+    manifest_path = Path(
+        _required_text(split, "manifest", f"{job.name}: dataset split")
+    )
+    if not manifest_path.is_absolute():
+        manifest_path = repository_root / manifest_path
+    if not manifest_path.is_file():
+        raise FileNotFoundError(
+            f"{job.name}: split manifest does not exist: {manifest_path}"
+        )
+    manifest = load_split_manifest(manifest_path)
+    if manifest.dataset != job.dataset_name:
+        raise ValueError(
+            f"{job.name}: split manifest dataset is {manifest.dataset}"
+        )
+    if job.max_samples is not None and len(manifest.assignments) != job.max_samples:
+        raise ValueError(
+            f"{job.name}: split manifest has {len(manifest.assignments)} "
+            f"samples, expected {job.max_samples}"
+        )
+
+
 def _validate_training_values(
     job_name: str,
     kwargs: Mapping[str, Any],
@@ -299,12 +369,7 @@ def _validate_training_values(
             kwargs.get(key),
             f"{job_name}: mapping_training.{key}",
         )
-    strategy = str(kwargs.get("split_strategy", ""))
-    if strategy not in {"sequential", "random", "partition"}:
-        raise ValueError(
-            f"{job_name}: unsupported mapping split_strategy {strategy!r}"
-        )
-    for key in ("valid_ratio", "test_ratio", "test_ratio_in_train"):
+    for key in ("valid_ratio", "test_ratio"):
         value = kwargs.get(key)
         if not isinstance(value, (int, float)) or isinstance(value, bool):
             raise TypeError(f"{job_name}: mapping_training.{key} must be numeric")
@@ -312,6 +377,10 @@ def _validate_training_values(
             raise ValueError(
                 f"{job_name}: mapping_training.{key} must be between 0 and 1"
             )
+    if float(kwargs["valid_ratio"]) + float(kwargs["test_ratio"]) >= 1.0:
+        raise ValueError(
+            f"{job_name}: Mapping valid_ratio + test_ratio must be below one"
+        )
     cosine_weight = kwargs.get("cosine_weight")
     if (
         not isinstance(cosine_weight, (int, float))

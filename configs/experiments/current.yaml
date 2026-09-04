@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 name: current_significant_sdc_matrix
 
 models:
@@ -38,124 +38,79 @@ execution:
     qwen25_vl_earthvqa:
       model: qwen25_vl
       dataset: earthvqa
-      injection:
-        fault_runs: 10
-      profile_output: Qwen2.5-VL-7B/EarthVQA/json/profile.json
-      mapping_data: Qwen2.5-VL-7B/EarthVQA/json/mapping.jsonl
-      mapping_model: Qwen2.5-VL-7B/EarthVQA/model/best_mapping_model.pt
-      injected_output: Qwen2.5-VL-7B/EarthVQA/json/injection.jsonl
-      labeled_output: Qwen2.5-VL-7B/EarthVQA/json/labels.jsonl
+      profile_output: artifacts/iclr_v2/qwen25_vl_earthvqa/json/profile.json
+      mapping_data: artifacts/iclr_v2/qwen25_vl_earthvqa/json/mapping.jsonl
+      mapping_model: artifacts/iclr_v2/qwen25_vl_earthvqa/model/mapping_model.pt
+      injected_output: artifacts/iclr_v2/qwen25_vl_earthvqa/json/injection.jsonl
+      labeled_output: artifacts/iclr_v2/qwen25_vl_earthvqa/json/labels.jsonl
     qwen25_vl_lingoqa:
       model: qwen25_vl
       dataset: lingoqa
       instrumentation:
         projection_method: project
-      injection:
-        retain_all_fault_runs: 2
-      profile_output: Qwen2.5-VL-7B/LingoQA/json/profile.json
-      mapping_data: Qwen2.5-VL-7B/LingoQA/json/mapping.jsonl
-      mapping_model: Qwen2.5-VL-7B/LingoQA/model/lingoqa_mapping_model.pt
-      injected_output: Qwen2.5-VL-7B/LingoQA/json/injection.jsonl
-      labeled_output: Qwen2.5-VL-7B/LingoQA/json/labels.jsonl
+      profile_output: artifacts/iclr_v2/qwen25_vl_lingoqa/json/profile.json
+      mapping_data: artifacts/iclr_v2/qwen25_vl_lingoqa/json/mapping.jsonl
+      mapping_model: artifacts/iclr_v2/qwen25_vl_lingoqa/model/mapping_model.pt
+      injected_output: artifacts/iclr_v2/qwen25_vl_lingoqa/json/injection.jsonl
+      labeled_output: artifacts/iclr_v2/qwen25_vl_lingoqa/json/labels.jsonl
     qwen25_vl_vqav2:
       model: qwen25_vl
       dataset: vqav2
-      mapping_training:
-        kwargs:
-          num_workers: 8
-          split_strategy: random
-          valid_ratio: 0.1
-          test_ratio: 0.1
-          early_stop_patience: 15
-          cosine_weight: 0.1
-      profile_output: Qwen2.5-VL-7B/VQAv2/json/profile.json
-      mapping_data: Qwen2.5-VL-7B/VQAv2/json/mapping.jsonl
-      mapping_model: Qwen2.5-VL-7B/VQAv2/model/best_mapping_model.pt
-      injected_output: Qwen2.5-VL-7B/VQAv2/json/injection.jsonl
-      labeled_output: Qwen2.5-VL-7B/VQAv2/json/labels.jsonl
+      profile_output: artifacts/iclr_v2/qwen25_vl_vqav2/json/profile.json
+      mapping_data: artifacts/iclr_v2/qwen25_vl_vqav2/json/mapping.jsonl
+      mapping_model: artifacts/iclr_v2/qwen25_vl_vqav2/model/mapping_model.pt
+      injected_output: artifacts/iclr_v2/qwen25_vl_vqav2/json/injection.jsonl
+      labeled_output: artifacts/iclr_v2/qwen25_vl_vqav2/json/labels.jsonl
     llava15_earthvqa:
       model: llava15
       dataset: earthvqa
-      profile_output: llava-v1.5-7B/EarthVQA/json/profile.json
-      mapping_data: llava-v1.5-7B/EarthVQA/json/mapping.jsonl
-      mapping_model: llava-v1.5-7B/EarthVQA/model/best_mapping_model.pt
-      injected_output: llava-v1.5-7B/EarthVQA/json/injection.jsonl
-      labeled_output: llava-v1.5-7B/EarthVQA/json/labels.jsonl
+      profile_output: artifacts/iclr_v2/llava15_earthvqa/json/profile.json
+      mapping_data: artifacts/iclr_v2/llava15_earthvqa/json/mapping.jsonl
+      mapping_model: artifacts/iclr_v2/llava15_earthvqa/model/mapping_model.pt
+      injected_output: artifacts/iclr_v2/llava15_earthvqa/json/injection.jsonl
+      labeled_output: artifacts/iclr_v2/llava15_earthvqa/json/labels.jsonl
     llava15_lingoqa:
       model: llava15
       dataset: lingoqa
-      instrumentation:
-        projection_method: project
-        seed: 1234
-      mapping_training:
-        kwargs:
-          num_workers: 8
-          cosine_weight: 2.0
-          early_stop_patience: 15
-          scheduler_enabled: true
-          pin_memory: true
-          persistent_workers: true
-          final_metrics: detailed
-      injection:
-        mapping_class: detect_sdc.mapping.LayerAwareResidualMLP
-        mapping_kwargs:
-          x_dim: 64
-          num_layers: 32
-          layer_emb_dim: 16
-          hidden_dim: 1024
-          num_blocks: 8
-          dropout: 0.1
-      profile_output: llava-v1.5-7B/LingoQA/json/profile.json
-      mapping_data: llava-v1.5-7B/LingoQA/json/mapping.jsonl
-      mapping_model: llava-v1.5-7B/LingoQA/model/lingoqa_mapping_model.pt
-      injected_output: llava-v1.5-7B/LingoQA/json/injection.jsonl
-      labeled_output: llava-v1.5-7B/LingoQA/json/labels.jsonl
+      profile_output: artifacts/iclr_v2/llava15_lingoqa/json/profile.json
+      mapping_data: artifacts/iclr_v2/llava15_lingoqa/json/mapping.jsonl
+      mapping_model: artifacts/iclr_v2/llava15_lingoqa/model/mapping_model.pt
+      injected_output: artifacts/iclr_v2/llava15_lingoqa/json/injection.jsonl
+      labeled_output: artifacts/iclr_v2/llava15_lingoqa/json/labels.jsonl
     llava15_vqav2:
       model: llava15
       dataset: vqav2
-      profile_output: llava-v1.5-7B/VQAv2/json/profile.json
-      mapping_data: llava-v1.5-7B/VQAv2/json/mapping.jsonl
-      mapping_model: llava-v1.5-7B/VQAv2/model/best_mapping_model.pt
-      injected_output: llava-v1.5-7B/VQAv2/json/injection.jsonl
-      labeled_output: llava-v1.5-7B/VQAv2/json/labels.jsonl
+      profile_output: artifacts/iclr_v2/llava15_vqav2/json/profile.json
+      mapping_data: artifacts/iclr_v2/llava15_vqav2/json/mapping.jsonl
+      mapping_model: artifacts/iclr_v2/llava15_vqav2/model/mapping_model.pt
+      injected_output: artifacts/iclr_v2/llava15_vqav2/json/injection.jsonl
+      labeled_output: artifacts/iclr_v2/llava15_vqav2/json/labels.jsonl
     internvl3_earthvqa:
       model: internvl3
       dataset: earthvqa
-      injection:
-        fault_runs: 10
-      profile_output: InternVL3-8B/EarthVQA/json/profile.json
-      mapping_data: InternVL3-8B/EarthVQA/json/mapping.jsonl
-      mapping_model: InternVL3-8B/EarthVQA/model/best_mapping_model.pt
-      injected_output: InternVL3-8B/EarthVQA/json/injection.jsonl
-      labeled_output: InternVL3-8B/EarthVQA/json/labels.jsonl
+      profile_output: artifacts/iclr_v2/internvl3_earthvqa/json/profile.json
+      mapping_data: artifacts/iclr_v2/internvl3_earthvqa/json/mapping.jsonl
+      mapping_model: artifacts/iclr_v2/internvl3_earthvqa/model/mapping_model.pt
+      injected_output: artifacts/iclr_v2/internvl3_earthvqa/json/injection.jsonl
+      labeled_output: artifacts/iclr_v2/internvl3_earthvqa/json/labels.jsonl
     internvl3_lingoqa:
       model: internvl3
       dataset: lingoqa
       instrumentation:
         projection_method: project
-      injection:
-        retain_all_fault_runs: 2
-      profile_output: InternVL3-8B/LingoQA/json/profile.json
-      mapping_data: InternVL3-8B/LingoQA/json/mapping.jsonl
-      mapping_model: InternVL3-8B/LingoQA/model/lingoqa_mapping_model.pt
-      injected_output: InternVL3-8B/LingoQA/json/injection.jsonl
-      labeled_output: InternVL3-8B/LingoQA/json/labels.jsonl
+      profile_output: artifacts/iclr_v2/internvl3_lingoqa/json/profile.json
+      mapping_data: artifacts/iclr_v2/internvl3_lingoqa/json/mapping.jsonl
+      mapping_model: artifacts/iclr_v2/internvl3_lingoqa/model/mapping_model.pt
+      injected_output: artifacts/iclr_v2/internvl3_lingoqa/json/injection.jsonl
+      labeled_output: artifacts/iclr_v2/internvl3_lingoqa/json/labels.jsonl
     internvl3_vqav2:
       model: internvl3
       dataset: vqav2
-      mapping_training:
-        kwargs:
-          num_workers: 8
-          split_strategy: random
-          valid_ratio: 0.1
-          test_ratio: 0.1
-          early_stop_patience: 15
-          cosine_weight: 0.1
-      profile_output: InternVL3-8B/VQAv2/json/profile.json
-      mapping_data: InternVL3-8B/VQAv2/json/mapping.jsonl
-      mapping_model: InternVL3-8B/VQAv2/model/best_mapping_model.pt
-      injected_output: InternVL3-8B/VQAv2/json/injection.jsonl
-      labeled_output: InternVL3-8B/VQAv2/json/labels.jsonl
+      profile_output: artifacts/iclr_v2/internvl3_vqav2/json/profile.json
+      mapping_data: artifacts/iclr_v2/internvl3_vqav2/json/mapping.jsonl
+      mapping_model: artifacts/iclr_v2/internvl3_vqav2/model/mapping_model.pt
+      injected_output: artifacts/iclr_v2/internvl3_vqav2/json/injection.jsonl
+      labeled_output: artifacts/iclr_v2/internvl3_vqav2/json/labels.jsonl
 
 labeling:
   model_path: /data01/cd_workspace/llm/prometheus-7b-v2.0
@@ -165,7 +120,8 @@ labeling:
   significance_scale: [2, 1, 0]
 
 features:
-  last_k_steps: 50
+  last_k_steps: 2
+  step_window: prefix
   statistics: [mean, max, min]
   metrics: [cos_sim, mean_diff, std_diff, l2_distance]
   finite_only: true
@@ -189,64 +145,81 @@ featurization:
     qwen25_vl_earthvqa:
       model: qwen25_vl
       dataset: earthvqa
-      input: Qwen2.5-VL-7B/EarthVQA/json/labels.jsonl
-      train_output: Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_train_set.csv
-      valid_output: Qwen2.5-VL-7B/EarthVQA/train_data/Qwen2.5_EarthVQA_valid_set.csv
+      input: artifacts/iclr_v2/qwen25_vl_earthvqa/json/labels.jsonl
+      fit_output: artifacts/iclr_v2/qwen25_vl_earthvqa/train_data/fit.csv
+      calibration_output: artifacts/iclr_v2/qwen25_vl_earthvqa/train_data/calibration.csv
+      test_output: artifacts/iclr_v2/qwen25_vl_earthvqa/train_data/test.csv
     qwen25_vl_lingoqa:
       model: qwen25_vl
       dataset: lingoqa
-      input: Qwen2.5-VL-7B/LingoQA/json/labels.jsonl
-      train_output: Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_train_set.csv
-      valid_output: Qwen2.5-VL-7B/LingoQA/train_data/Qwen2.5_LingoQA_valid_set.csv
+      input: artifacts/iclr_v2/qwen25_vl_lingoqa/json/labels.jsonl
+      fit_output: artifacts/iclr_v2/qwen25_vl_lingoqa/train_data/fit.csv
+      calibration_output: artifacts/iclr_v2/qwen25_vl_lingoqa/train_data/calibration.csv
+      test_output: artifacts/iclr_v2/qwen25_vl_lingoqa/train_data/test.csv
     qwen25_vl_vqav2:
       model: qwen25_vl
       dataset: vqav2
-      input: Qwen2.5-VL-7B/VQAv2/json/labels.jsonl
-      train_output: Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_train_set.csv
-      valid_output: Qwen2.5-VL-7B/VQAv2/train_data/Qwen2.5_VQAv2_valid_set.csv
+      input: artifacts/iclr_v2/qwen25_vl_vqav2/json/labels.jsonl
+      fit_output: artifacts/iclr_v2/qwen25_vl_vqav2/train_data/fit.csv
+      calibration_output: artifacts/iclr_v2/qwen25_vl_vqav2/train_data/calibration.csv
+      test_output: artifacts/iclr_v2/qwen25_vl_vqav2/train_data/test.csv
     llava15_earthvqa:
       model: llava15
       dataset: earthvqa
-      input: llava-v1.5-7B/EarthVQA/json/labels.jsonl
-      train_output: llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_train_set.csv
-      valid_output: llava-v1.5-7B/EarthVQA/train_data/llava-v1.5-7B_valid_set.csv
+      input: artifacts/iclr_v2/llava15_earthvqa/json/labels.jsonl
+      fit_output: artifacts/iclr_v2/llava15_earthvqa/train_data/fit.csv
+      calibration_output: artifacts/iclr_v2/llava15_earthvqa/train_data/calibration.csv
+      test_output: artifacts/iclr_v2/llava15_earthvqa/train_data/test.csv
     llava15_lingoqa:
       model: llava15
       dataset: lingoqa
-      input: llava-v1.5-7B/LingoQA/json/labels.jsonl
-      train_output: llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_train_set.csv
-      valid_output: llava-v1.5-7B/LingoQA/train_data/llava-v1.5-7B_valid_set.csv
+      input: artifacts/iclr_v2/llava15_lingoqa/json/labels.jsonl
+      fit_output: artifacts/iclr_v2/llava15_lingoqa/train_data/fit.csv
+      calibration_output: artifacts/iclr_v2/llava15_lingoqa/train_data/calibration.csv
+      test_output: artifacts/iclr_v2/llava15_lingoqa/train_data/test.csv
     llava15_vqav2:
       model: llava15
       dataset: vqav2
-      input: llava-v1.5-7B/VQAv2/json/labels.jsonl
-      train_output: llava-v1.5-7B/VQAv2/train_data/llava-v1.5-7B_train_set.csv
-      valid_output: llava-v1.5-7B/VQAv2/train_data/llava-v1.5-7B_valid_set.csv
+      input: artifacts/iclr_v2/llava15_vqav2/json/labels.jsonl
+      fit_output: artifacts/iclr_v2/llava15_vqav2/train_data/fit.csv
+      calibration_output: artifacts/iclr_v2/llava15_vqav2/train_data/calibration.csv
+      test_output: artifacts/iclr_v2/llava15_vqav2/train_data/test.csv
     internvl3_earthvqa:
       model: internvl3
       dataset: earthvqa
-      input: InternVL3-8B/EarthVQA/json/labels.jsonl
-      train_output: InternVL3-8B/EarthVQA/train_data/InternVL3_EarthVQA_train_set.csv
-      valid_output: InternVL3-8B/EarthVQA/train_data/InternVL3_EarthVQA_valid_set.csv
+      input: artifacts/iclr_v2/internvl3_earthvqa/json/labels.jsonl
+      fit_output: artifacts/iclr_v2/internvl3_earthvqa/train_data/fit.csv
+      calibration_output: artifacts/iclr_v2/internvl3_earthvqa/train_data/calibration.csv
+      test_output: artifacts/iclr_v2/internvl3_earthvqa/train_data/test.csv
     internvl3_lingoqa:
       model: internvl3
       dataset: lingoqa
-      input: InternVL3-8B/LingoQA/json/labels.jsonl
-      train_output: InternVL3-8B/LingoQA/train_data/InternVL3_LingoQA_train_set.csv
-      valid_output: InternVL3-8B/LingoQA/train_data/InternVL3_LingoQA_valid_set.csv
+      input: artifacts/iclr_v2/internvl3_lingoqa/json/labels.jsonl
+      fit_output: artifacts/iclr_v2/internvl3_lingoqa/train_data/fit.csv
+      calibration_output: artifacts/iclr_v2/internvl3_lingoqa/train_data/calibration.csv
+      test_output: artifacts/iclr_v2/internvl3_lingoqa/train_data/test.csv
     internvl3_vqav2:
       model: internvl3
       dataset: vqav2
-      input: InternVL3-8B/VQAv2/json/labels.jsonl
-      train_output: InternVL3-8B/VQAv2/train_data/InternVL3_VQAv2_train_set.csv
-      valid_output: InternVL3-8B/VQAv2/train_data/InternVL3_VQAv2_valid_set.csv
+      input: artifacts/iclr_v2/internvl3_vqav2/json/labels.jsonl
+      fit_output: artifacts/iclr_v2/internvl3_vqav2/train_data/fit.csv
+      calibration_output: artifacts/iclr_v2/internvl3_vqav2/train_data/calibration.csv
+      test_output: artifacts/iclr_v2/internvl3_vqav2/train_data/test.csv
 
 detector:
   task: binary_significant_sdc
-  group_column: orig_id
+  group_column: semantic_group_id
   keep_all_feature_nan_in_training: true
-  evaluation_slices: [full, non_all_feature_nan]
+  evaluation_slices:
+    - full
+    - finite
+    - clean
+    - injected_non_sdc
+    - slight_sdc
+    - significant_sdc
   random_state: 42
+  calibration:
+    strategy: maximize_f1
   xgboost:
     common:
       n_estimators: 10000

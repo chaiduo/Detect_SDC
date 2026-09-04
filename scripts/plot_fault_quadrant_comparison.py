@@ -201,7 +201,7 @@ def plot(
                 "Times",
                 "DejaVu Serif",
             ],
-            "font.size": 8.6,
+            "font.size": 10.5,
             "font.weight": "normal",
             "axes.edgecolor": "black",
             "axes.linewidth": 0.5,
@@ -225,14 +225,14 @@ def plot(
     ]
 
     model_labels = {
-        "Qwen2.5-VL-7B": "Qwen2.5",
-        "InternVL3-8B": "InternVL3",
-        "LLaVA-1.5-7B": "LLaVA-1.5",
+        "Qwen2.5-VL-7B": "Qwen2.5-VL-7B",
+        "InternVL3-8B": "InternVL3-8B",
+        "LLaVA-1.5-7B": "LLaVA-1.5-7B",
     }
-    figure_width = 5.5
+    figure_width = 6.1
     plot_left = 0.10
     plot_right = 0.92
-    plot_bottom = 0.08
+    plot_bottom = 0.09
     plot_top = 0.92
     subplot_spacing = 0.02
     # A square plotting region makes equal wspace/hspace physically equal.
@@ -277,7 +277,7 @@ def plot(
                         f"{value:.1f}%",
                         ha="center",
                         va="center",
-                        fontsize=8.6,
+                        fontsize=11.5,
                         color=text_color,
                     )
 
@@ -293,7 +293,7 @@ def plot(
                 direction="out",
                 length=0,
                 width=0.4,
-                labelsize=8.2,
+                labelsize=11.0,
                 pad=1.0,
             )
             if row_index == len(datasets) - 1:
@@ -307,11 +307,11 @@ def plot(
                 axis.set_xticklabels([])
             if column_index == 0:
                 axis.set_yticklabels(["Non-sig.", "Sig."])
-                axis.set_ylabel(dataset, labelpad=4.0, fontsize=8.6)
+                axis.set_ylabel(dataset, labelpad=5.0, fontsize=12.0)
             else:
                 axis.set_yticklabels([])
             if row_index == 0:
-                axis.set_title(model_labels.get(model, model), pad=2.0, fontsize=8.6)
+                axis.set_title(model_labels.get(model, model), pad=4.0, fontsize=11.0)
             axis.axvline(1, color="black", linewidth=0.4)
             axis.axhline(1, color="black", linewidth=0.4)
             for spine in axis.spines.values():
@@ -328,13 +328,13 @@ def plot(
         handles,
         labels,
         loc="upper center",
-        bbox_to_anchor=(0.5, 0.99),
+        bbox_to_anchor=(0.5, 1.02),
         ncol=2,
         frameon=True,
         fancybox=False,
         edgecolor="black",
         framealpha=1.0,
-        fontsize=8.0,
+        fontsize=10.0,
         handlelength=0.85,
         columnspacing=0.5,
         borderpad=0.2,

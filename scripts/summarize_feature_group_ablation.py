@@ -10,9 +10,9 @@ import pandas as pd
 
 
 MODELS = {
-    "Qwen2.5-VL-7B": "Qwen2.5-VL-7B",
-    "InternVL3-8B": "InternVL3-8B",
-    "LLaVA-1.5-7B": "llava-v1.5-7B",
+    "Qwen2.5-VL-7B": "qwen25_vl",
+    "InternVL3-8B": "internvl3",
+    "LLaVA-1.5-7B": "llava15",
 }
 DATASETS = ("EarthVQA", "LingoQA", "VQAv2")
 LEAVE_ONE_OUT = (
@@ -37,7 +37,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=root / "analysis/feature_ablation_20260815",
+        default=root / "analysis/iclr_v2/feature_groups",
     )
     return parser.parse_args()
 
@@ -47,8 +47,9 @@ def load_results(root: Path) -> pd.DataFrame:
     for model, directory in MODELS.items():
         path = (
             root
+            / "artifacts/iclr_v2/ablations/feature_groups"
             / directory
-            / "feature_ablation_20260815/summary_all_datasets.csv"
+            / "summary_all_datasets.csv"
         )
         frame = pd.read_csv(path)
         if set(frame["model"]) != {model}:

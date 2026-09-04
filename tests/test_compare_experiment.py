@@ -1,9 +1,7 @@
 import unittest
-import tempfile
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import torch
 from torch import nn
 
@@ -18,9 +16,10 @@ from compare_experiment import (
     evaluate_detection,
     threshold_at_fpr,
 )
-from compare_experiment.cohorts import load_comparison_cohorts
 from compare_experiment.config import load_comparison_config
+from compare_experiment.evaluate_results import _per_run_metrics
 from compare_experiment.evaluation import apply_threshold
+from compare_experiment.profile_baselines import _validate_profile_counts
 
 
 def _trace(values_by_step):
@@ -155,12 +154,12 @@ class EvaluationTest(unittest.TestCase):
         metrics = evaluate_detection(
             is_sdc=[0, 1, 1, 1],
             is_significant_sdc=[0, 0, 1, 1],
-            detected=[1, 1, 1, 0],
+            detected=[0, 1, 1, 0],
         )
         self.assertEqual(metrics.sdc_recall, 2 / 3)
         self.assertEqual(metrics.significant_sdc_recall, 0.5)
-        self.assertEqual(metrics.non_sdc_fpr, 1.0)
-        self.assertEqual(metrics.significant_sdc_precision, 1 / 3)
+        self.assertEqual(metrics.non_significant_fpr, 0.5)
+        self.assertEqual(metrics.significant_sdc_precision, 0.5)
 
     def test_non_finite_fast_path_reports_infeasible_fpr_budget(self):
         calibration = threshold_at_fpr(
@@ -169,6 +168,29 @@ class EvaluationTest(unittest.TestCase):
         )
         self.assertFalse(calibration.budget_feasible)
         self.assertEqual(calibration.achieved_fpr, 0.25)
+
+    def test_per_run_metrics_skip_clean_rows_without_run_index(self):
+        rows = [
+            {
+                "sample_uid": "clean",
+                "injected": False,
+                "run_index": float("nan"),
+                "is_sdc": False,
+                "is_significant_sdc": False,
+            },
+            {
+                "sample_uid": "fault",
+                "injected": True,
+                "run_index": 0,
+                "is_sdc": True,
+                "is_significant_sdc": True,
+            },
+        ]
+
+        result = _per_run_metrics(rows, np.asarray([False, True]))
+
+        self.assertEqual(set(result), {"0"})
+        self.assertEqual(result["0"]["samples"], 1)
 
 
 class ComparisonConfigurationTest(unittest.TestCase):
@@ -183,34 +205,15 @@ class ComparisonConfigurationTest(unittest.TestCase):
         self.assertEqual(config.monitored_layers, (6, 7, 22, 23, 24, 25, 26, 27))
         self.assertEqual(config.drdna.cohort_size, 64)
         self.assertEqual(config.drdna.bins, 10)
+        self.assertEqual(config.calibration_strategy, "maximize_f1")
 
-    def test_cohort_split_is_deterministic_and_leakage_safe(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            train = root / "train.csv"
-            valid = root / "valid.csv"
-            pd.DataFrame(
-                {"orig_id": [f"train-{index}" for index in range(10)]}
-            ).to_csv(train, index=False)
-            pd.DataFrame(
-                {"orig_id": [f"test-{index}" for index in range(3)]}
-            ).to_csv(valid, index=False)
-            first = load_comparison_cohorts(
-                train,
-                valid,
-                calibration_ratio=0.2,
-                random_seed=42,
-            )
-            second = load_comparison_cohorts(
-                train,
-                valid,
-                calibration_ratio=0.2,
-                random_seed=42,
-            )
-        self.assertEqual(first, second)
-        self.assertEqual(len(first.fit_orig_ids), 8)
-        self.assertEqual(len(first.calibration_orig_ids), 2)
-        self.assertEqual(len(first.test_orig_ids), 3)
+    def test_short_outputs_do_not_make_profile_cohort_incomplete(self):
+        _validate_profile_counts(
+            selected=10,
+            processed=8,
+            skipped_short=2,
+        )
+
 
 
 class _Attention(nn.Module):

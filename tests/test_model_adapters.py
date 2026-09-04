@@ -23,6 +23,8 @@ class ModelAdapterTest(unittest.TestCase):
 
         self.assertIsInstance(adapter, Qwen25VLAdapter)
         self.assertEqual(adapter.min_pixels, 256 * 28 * 28)
+        self.assertTrue(adapter.deterministic)
+        self.assertEqual(adapter.seed, 42)
         with self.assertRaisesRegex(RuntimeError, "not loaded"):
             _ = adapter.model
 
@@ -34,6 +36,8 @@ class ModelAdapterTest(unittest.TestCase):
         self.assertIsInstance(adapter, Llava15Adapter)
         self.assertTrue(Path(adapter.source_path).is_dir())
         self.assertIn("30 words", adapter.answer_suffix)
+        self.assertTrue(adapter.deterministic)
+        self.assertEqual(adapter.seed, 42)
         with self.assertRaisesRegex(RuntimeError, "not loaded"):
             _ = adapter.model
 
@@ -46,6 +50,8 @@ class ModelAdapterTest(unittest.TestCase):
         self.assertEqual(adapter.image_size, 448)
         self.assertEqual(adapter.max_tiles, 12)
         self.assertIn("30 words", adapter.answer_suffix)
+        self.assertTrue(adapter.deterministic)
+        self.assertEqual(adapter.seed, 42)
         with self.assertRaisesRegex(RuntimeError, "not loaded"):
             _ = adapter.model
 

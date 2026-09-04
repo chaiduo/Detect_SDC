@@ -134,6 +134,16 @@ def extract_feature_row(
 
     label, significance, target = build_supervision(sample)
     orig_id = _orig_id(sample)
+    semantic_group_id = str(
+        sample.get("semantic_group_id", orig_id)
+    ).strip()
+    if not semantic_group_id:
+        raise ValueError("sample is missing semantic_group_id")
+    split = sample.get("split")
+    if split not in (None, "fit", "calibration", "test"):
+        raise ValueError(f"sample has invalid split: {split!r}")
+    fault = sample.get("fault")
+    fault = fault if isinstance(fault, Mapping) else {}
     step_pair_map = _build_step_pair_map(records)
     all_steps = sorted(step_pair_map)
     if not all_steps:
@@ -166,7 +176,30 @@ def extract_feature_row(
 
     return {
         "orig_id": orig_id,
+        "semantic_group_id": semantic_group_id,
+        "split": split,
         "sample_uid": stable_sample_uid(sample, namespace=uid_namespace),
+        "injected": int(bool(sample.get("injected", fault))),
+        "run_index": sample.get("run_index"),
+        "is_sdc": int(
+            bool(
+                sample.get(
+                    "is_sdc",
+                    str(sample["pred_answer"])
+                    != str(sample["clean_answer"]),
+                )
+            )
+        ),
+        "fault_component": fault.get("component"),
+        "fault_layer_index": fault.get("layer_index"),
+        "fault_op_type": fault.get("op_type"),
+        "fault_bit_categories": json.dumps(
+            fault.get("bit_categories"),
+            ensure_ascii=True,
+            separators=(",", ":"),
+        )
+        if fault.get("bit_categories") is not None
+        else None,
         "total_steps": len(all_steps),
         "last_k_steps": spec.last_k_steps,
         "num_steps_used": len(window_steps),

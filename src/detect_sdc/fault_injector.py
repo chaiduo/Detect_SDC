@@ -1,6 +1,8 @@
-import torch
-import numpy as np
 import random
+import re
+
+import numpy as np
+import torch
 
 
 class FaultInjector:
@@ -23,6 +25,27 @@ class FaultInjector:
         torch.int32: np.uint32,
         torch.int64: np.uint64
     }
+    BIT_POLICIES = (
+        "random",
+        "mantissa_only",
+        "low_mantissa",
+        "low_exponent",
+    )
+    _mantissa_bits = {
+        torch.float16: tuple(range(10)),
+        torch.bfloat16: tuple(range(7)),
+        torch.float32: tuple(range(23)),
+    }
+    _low_mantissa_bits = {
+        torch.float16: tuple(range(5)),
+        torch.bfloat16: tuple(range(4)),
+        torch.float32: tuple(range(11)),
+    }
+    _low_exponent_bits = {
+        torch.float16: tuple(range(15)),
+        torch.bfloat16: tuple(range(12)),
+        torch.float32: tuple(range(28)),
+    }
 
     def __init__(self, model, mode="activation"):
         """
@@ -44,6 +67,8 @@ class FaultInjector:
         # 随机注入时翻转几个 bit，默认 1 bit
         # 即便只保留多 bit 接口，num_bits=1 仍然是合法的
         self.num_bits = 1
+        self.bit_policy = "random"
+        self._manual_bit_positions = False
 
         # 目标模块名，例如 "model.layers.10.mlp.down_proj"
         self.module_name = None
@@ -150,13 +175,111 @@ class FaultInjector:
         self.fault_info = {
             "mode": mode,                    # activation / weight
             "module": module_name,          # 模块名
+            "component": self._module_component(module_name),
+            "layer_index": self._module_layer_index(module_name),
+            "op_type": self._module_op_type(module_name),
             "forward": step,                # 注入发生的 forward step
             "dtype": dtype,                 # 张量类型
             "idx": idx,                     # flatten 后元素索引
             "bit_positions": bit_positions, # 多 bit 列表
+            "bit_categories": self._bit_categories(
+                dtype,
+                bit_positions or [],
+            ),
+            "bit_policy": (
+                "manual" if self._manual_bit_positions else self.bit_policy
+            ),
             "before": before,               # 翻转前数值
             "after": after                  # 翻转后数值
         }
+
+    @staticmethod
+    def _module_component(module_name):
+        name = str(module_name)
+        if "mm_projector" in name or "merger" in name:
+            return "projector"
+        if "vision" in name or ".visual." in name:
+            return "vision"
+        if name == "lm_head" or name.endswith(".lm_head"):
+            return "lm_head"
+        if "language_model.layers." in name or name.startswith("model.layers."):
+            return "language"
+        return "other"
+
+    @classmethod
+    def _module_layer_index(cls, module_name):
+        if cls._module_component(module_name) != "language":
+            return None
+        match = re.search(r"(?:language_model\.)?layers\.(\d+)", str(module_name))
+        return None if match is None else int(match.group(1))
+
+    @staticmethod
+    def _module_op_type(module_name):
+        name = str(module_name)
+        known = (
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+            "qkv",
+            "fc1",
+            "fc2",
+            "lm_head",
+        )
+        for candidate in known:
+            if name == candidate or name.endswith(f".{candidate}"):
+                return candidate
+        return name.rsplit(".", maxsplit=1)[-1]
+
+    @staticmethod
+    def _bit_categories(dtype, bit_positions):
+        layouts = {
+            torch.float16: (10, 15),
+            torch.bfloat16: (7, 15),
+            torch.float32: (23, 31),
+            "torch.float16": (10, 15),
+            "torch.bfloat16": (7, 15),
+            "torch.float32": (23, 31),
+        }
+        layout = layouts.get(dtype)
+        if layout is None:
+            return ["integer"] * len(bit_positions)
+        exponent_start, sign_bit = layout
+        return [
+            (
+                "sign"
+                if bit == sign_bit
+                else "exponent"
+                if bit >= exponent_start
+                else "mantissa"
+            )
+            for bit in bit_positions
+        ]
+
+    def _candidate_bit_positions(self, dtype):
+        bit_width = self._get_bit_width(dtype)
+        if bit_width is None:
+            raise ValueError(f"Unsupported dtype for bit flip: {dtype}")
+        if self.bit_policy == "random":
+            return tuple(range(bit_width))
+        if self.bit_policy == "mantissa_only":
+            layouts = self._mantissa_bits
+        elif self.bit_policy == "low_mantissa":
+            layouts = self._low_mantissa_bits
+        elif self.bit_policy == "low_exponent":
+            layouts = self._low_exponent_bits
+        else:
+            raise ValueError(f"Unsupported bit_policy: {self.bit_policy!r}")
+        try:
+            return layouts[dtype]
+        except KeyError as error:
+            raise ValueError(
+                f"bit_policy={self.bit_policy!r} requires a floating dtype, "
+                f"got {dtype}"
+            ) from error
 
     # ============================================================
     # bit flip 核心函数
@@ -330,14 +453,17 @@ class FaultInjector:
         if num_bits <= 0:
             raise ValueError("num_bits must be >= 1")
 
-        if num_bits > bit_width:
-            raise ValueError(f"num_bits={num_bits} > bit_width={bit_width}")
-
         # 优先使用手动指定的 bit_positions
         if self.bit_positions is not None:
             bit_positions = self.bit_positions
         else:
-            bit_positions = random.sample(range(bit_width), num_bits)
+            candidates = self._candidate_bit_positions(tensor.dtype)
+            if num_bits > len(candidates):
+                raise ValueError(
+                    f"num_bits={num_bits} exceeds {self.bit_policy} "
+                    f"candidate count={len(candidates)} for {tensor.dtype}"
+                )
+            bit_positions = random.sample(candidates, num_bits)
             self.bit_positions = bit_positions
 
         return self.flip_bits(tensor, self.idx, bit_positions)
@@ -511,10 +637,13 @@ class FaultInjector:
         if self.bit_positions is None:
             if self.num_bits <= 0:
                 raise ValueError("self.num_bits must be >= 1")
-            if self.num_bits > bit_width:
-                raise ValueError(f"self.num_bits={self.num_bits} > bit_width={bit_width}")
-
-            self.bit_positions = random.sample(range(bit_width), self.num_bits)
+            candidates = self._candidate_bit_positions(weight.dtype)
+            if self.num_bits > len(candidates):
+                raise ValueError(
+                    f"num_bits={self.num_bits} exceeds {self.bit_policy} "
+                    f"candidate count={len(candidates)} for {weight.dtype}"
+                )
+            self.bit_positions = random.sample(candidates, self.num_bits)
 
         # 只备份被修改的那个元素，节省空间
         original_value = flat[self.idx].item()
@@ -612,6 +741,8 @@ class FaultInjector:
         self.idx = -1
         self.bit_positions = None
         self.num_bits = 1
+        self.bit_policy = "random"
+        self._manual_bit_positions = False
         self.inject_step = -1
         self.current_step = 0
         self.module_name = None
@@ -631,6 +762,14 @@ class FaultInjector:
         if num_bits <= 0:
             raise ValueError("num_bits must be >= 1")
         self.num_bits = num_bits
+
+    def set_bit_policy(self, bit_policy: str):
+        policy = str(bit_policy).strip().lower()
+        if policy not in self.BIT_POLICIES:
+            raise ValueError(
+                f"bit_policy must be one of {self.BIT_POLICIES}, got {bit_policy!r}"
+            )
+        self.bit_policy = policy
 
     def set_inject_info(
         self,
@@ -659,3 +798,4 @@ class FaultInjector:
             normalized = self._normalize_bit_positions(bit_positions)
             self.bit_positions = normalized
             self.num_bits = len(normalized)
+            self._manual_bit_positions = True

@@ -1,0 +1,41 @@
+schema_version: 2
+
+experiment:
+  source_config: configs/experiments/smoke.yaml
+  results_root: compare_experiment/results_smoke_v2
+  methods:
+    - ranger_style
+    - drdna_style
+    - sieve
+
+monitoring:
+  layer_pairs:
+    - [6, 7]
+    - [22, 23]
+    - [23, 24]
+    - [24, 25]
+    - [25, 26]
+    - [26, 27]
+  max_steps: 2
+
+cohorts:
+  profile_seed: 42
+  ranger_profile_fraction_of_fit: 0.5
+  maximum_profile_samples: 10
+
+drdna:
+  cohort_size: 16
+  bins: 5
+  strike_count: 3
+  random_seed: 42
+  lambda_individual: 1.0
+  lambda_layer: 1.0
+  lambda_extreme: 1.0
+
+calibration:
+  strategy: maximize_f1
+  supplementary_fpr_budgets: [0.10]
+
+evaluation:
+  bootstrap_replicates: 100
+  bootstrap_seed: 42

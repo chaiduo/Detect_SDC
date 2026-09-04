@@ -17,7 +17,7 @@ from detect_sdc.config import load_yaml
 from detect_sdc.detector.xgboost import (
     XGBoostConfig,
     all_feature_nan_mask,
-    run_xgboost,
+    run_calibrated_xgboost,
 )
 from detect_sdc.features.extraction import FeatureSpec
 from detect_sdc.features.jobs import load_feature_job
@@ -50,12 +50,22 @@ FULL_PAIRS = (
 FULL_SPEC = FeatureSpec(
     selected_layer_pairs=FULL_PAIRS,
     distance_pairs=FULL_PAIRS,
-    last_k_steps=50,
+    last_k_steps=2,
     finite_only=True,
+    step_window="prefix",
 )
 META_COLUMNS = (
     "orig_id",
+    "semantic_group_id",
+    "split",
     "sample_uid",
+    "injected",
+    "run_index",
+    "is_sdc",
+    "fault_component",
+    "fault_layer_index",
+    "fault_op_type",
+    "fault_bit_categories",
     "total_steps",
     "last_k_steps",
     "num_steps_used",
@@ -182,16 +192,23 @@ def fixed_validation_cohort(valid: pd.DataFrame) -> pd.DataFrame:
 
 def materialize(
     *,
-    source_train: pd.DataFrame,
-    fixed_valid: pd.DataFrame,
+    source_fit: pd.DataFrame,
+    source_calibration: pd.DataFrame,
+    fixed_test: pd.DataFrame,
     configuration: Configuration,
     destination: Path,
     overwrite: bool,
-) -> tuple[Path, Path]:
-    train_path = destination / "train_data/train.csv"
-    valid_path = destination / "train_data/valid_fixed_cohort.csv"
-    if train_path.is_file() and valid_path.is_file() and not overwrite:
-        return train_path, valid_path
+) -> tuple[Path, Path, Path]:
+    fit_path = destination / "train_data/fit.csv"
+    calibration_path = destination / "train_data/calibration.csv"
+    test_path = destination / "train_data/test_fixed_cohort.csv"
+    if (
+        fit_path.is_file()
+        and calibration_path.is_file()
+        and test_path.is_file()
+        and not overwrite
+    ):
+        return fit_path, calibration_path, test_path
 
     columns = [
         *META_COLUMNS,
@@ -199,20 +216,22 @@ def materialize(
         *TARGET_COLUMNS,
     ]
     missing = sorted(
-        (set(columns) - set(source_train))
-        | (set(columns) - set(fixed_valid))
+        (set(columns) - set(source_fit))
+        | (set(columns) - set(source_calibration))
+        | (set(columns) - set(fixed_test))
     )
     if missing:
         raise ValueError(f"{configuration.name} missing columns: {missing}")
-    _write_csv(source_train.loc[:, columns], train_path)
-    _write_csv(fixed_valid.loc[:, columns], valid_path)
-    return train_path, valid_path
+    _write_csv(source_fit.loc[:, columns], fit_path)
+    _write_csv(source_calibration.loc[:, columns], calibration_path)
+    _write_csv(fixed_test.loc[:, columns], test_path)
+    return fit_path, calibration_path, test_path
 
 
 def expected_full_metrics(feature_job: Any) -> Mapping[str, Any]:
     path = (
-        feature_job.train_output.parent.parent
-        / "output/train_with_nan/metrics_summary.json"
+        feature_job.fit_output.parent.parent
+        / "output/metrics_summary.json"
     )
     if not path.is_file():
         raise FileNotFoundError(f"Main detector summary does not exist: {path}")
@@ -221,7 +240,7 @@ def expected_full_metrics(feature_job: Any) -> Mapping[str, Any]:
         raise AssertionError(
             f"Main detector feature order differs from Full: {path}"
         )
-    return summary["valid_non_all_nan_metrics"]["target_significant_sdc"]
+    return summary["metrics"]["test_finite"]["target_significant_sdc"]
 
 
 def verify_full_reproduction(
@@ -243,16 +262,18 @@ def verify_full_reproduction(
 
 def run_configuration(
     *,
-    source_train: pd.DataFrame,
-    fixed_valid: pd.DataFrame,
+    source_fit: pd.DataFrame,
+    source_calibration: pd.DataFrame,
+    fixed_test: pd.DataFrame,
     configuration: Configuration,
     destination: Path,
     config: XGBoostConfig,
     overwrite: bool,
 ) -> Mapping[str, Any]:
-    train_path, valid_path = materialize(
-        source_train=source_train,
-        fixed_valid=fixed_valid,
+    fit_path, calibration_path, test_path = materialize(
+        source_fit=source_fit,
+        source_calibration=source_calibration,
+        fixed_test=fixed_test,
         configuration=configuration,
         destination=destination,
         overwrite=overwrite,
@@ -261,18 +282,19 @@ def run_configuration(
     if summary_path.is_file() and not overwrite:
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
     else:
-        summary = run_xgboost(
-            train_path,
-            valid_path,
+        summary = run_calibrated_xgboost(
+            fit_path,
+            calibration_path,
+            test_path,
             destination / "output",
-            group_column="orig_id",
+            group_column="semantic_group_id",
             config=config,
         )
     if tuple(summary["feature_columns"]) != configuration.feature_columns:
         raise AssertionError(
             f"Unexpected feature order for {configuration.name}"
         )
-    return summary["valid_full_metrics"]["target_significant_sdc"]
+    return summary["metrics"]["test_full"]["target_significant_sdc"]
 
 
 def run_dataset(
@@ -290,11 +312,12 @@ def run_dataset(
         f"{model_key}_{DATASETS[dataset]}",
         repository_root=root,
     )
-    source_train = pd.read_csv(feature_job.train_output)
-    source_valid = pd.read_csv(feature_job.valid_output)
-    fixed_valid = fixed_validation_cohort(source_valid)
+    source_fit = pd.read_csv(feature_job.fit_output)
+    source_calibration = pd.read_csv(feature_job.calibration_output)
+    source_test = pd.read_csv(feature_job.test_output)
+    fixed_test = fixed_validation_cohort(source_test)
     target = pd.to_numeric(
-        fixed_valid["significant_sdc_target"],
+        fixed_test["significant_sdc_target"],
         errors="raise",
     ).astype(int)
     expected = expected_full_metrics(feature_job)
@@ -309,11 +332,11 @@ def run_dataset(
                 "Main-experiment validation rows with at least one finite "
                 "feature under the complete four-group configuration"
             ),
-            "validation_rows_before_filter": len(source_valid),
-            "validation_rows": len(fixed_valid),
+            "test_rows_before_filter": len(source_test),
+            "test_rows": len(fixed_test),
             "positive_samples": int(target.sum()),
             "negative_samples": int(len(target) - target.sum()),
-            "sample_uid_sha256": _uid_digest(fixed_valid["sample_uid"]),
+            "sample_uid_sha256": _uid_digest(fixed_test["sample_uid"]),
             "feature_groups": FEATURE_GROUPS,
             "full_feature_count": len(FULL_SPEC.feature_columns),
         },
@@ -328,8 +351,9 @@ def run_dataset(
             flush=True,
         )
         metrics = run_configuration(
-            source_train=source_train,
-            fixed_valid=fixed_valid,
+            source_fit=source_fit,
+            source_calibration=source_calibration,
+            fixed_test=fixed_test,
             configuration=configuration,
             destination=dataset_root / configuration.name,
             config=xgboost_config,
@@ -352,7 +376,7 @@ def run_dataset(
                 "removed_group": configuration.removed_group,
                 "feature_count": len(configuration.feature_columns),
                 "evaluation_cohort": "fixed_full_non_all_nan",
-                "validation_rows": len(fixed_valid),
+                "test_rows": len(fixed_test),
                 "positive_samples": int(target.sum()),
                 "negative_samples": int(len(target) - target.sum()),
                 **{key: metrics[key] for key in METRIC_KEYS},
@@ -410,11 +434,11 @@ def main() -> int:
     datasets = tuple(DATASETS) if args.dataset == "all" else (args.dataset,)
     all_rows = []
     for model in models:
-        _, model_directory = MODELS[model]
+        model_key, _ = MODELS[model]
         output_base = (
             args.output_root.resolve()
             if args.output_root is not None
-            else root / model_directory / "feature_ablation_20260815"
+            else root / "artifacts/iclr_v2/ablations/feature_groups" / model_key
         )
         model_rows = []
         for dataset in datasets:

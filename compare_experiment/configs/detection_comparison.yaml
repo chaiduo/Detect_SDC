@@ -1,7 +1,8 @@
-schema_version: 1
+schema_version: 2
 
 experiment:
   source_config: configs/experiments/current.yaml
+  results_root: compare_experiment/results_v2
   methods:
     - ranger_style
     - drdna_style
@@ -18,8 +19,7 @@ monitoring:
   max_steps: 2
 
 cohorts:
-  calibration_ratio_within_train: 0.2
-  split_seed: 42
+  profile_seed: 42
   ranger_profile_fraction_of_fit: 0.2
   maximum_profile_samples: 1000
 
@@ -33,12 +33,9 @@ drdna:
   lambda_extreme: 1.0
 
 calibration:
-  target_non_sdc_fpr: 0.01
+  strategy: maximize_f1
   supplementary_fpr_budgets: [0.005, 0.01, 0.02, 0.05]
 
 evaluation:
-  include_all_significant_sdc: true
-  maximum_sdc_per_model_dataset: 1000
-  maximum_non_sdc_per_model_dataset: 1000
   bootstrap_replicates: 10000
   bootstrap_seed: 20260825

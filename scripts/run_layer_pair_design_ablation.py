@@ -13,7 +13,10 @@ from typing import Any, Mapping
 import pandas as pd
 
 from detect_sdc.config import load_yaml
-from detect_sdc.detector.xgboost import XGBoostConfig, run_xgboost
+from detect_sdc.detector.xgboost import (
+    XGBoostConfig,
+    run_calibrated_xgboost,
+)
 from detect_sdc.features.extraction import FeatureSpec
 from detect_sdc.features.jobs import FeatureJob, execute_feature_job, load_feature_job
 
@@ -50,7 +53,16 @@ CURRENT_PAIRS = (
 )
 META_COLUMNS = (
     "orig_id",
+    "semantic_group_id",
+    "split",
     "sample_uid",
+    "injected",
+    "run_index",
+    "is_sdc",
+    "fault_component",
+    "fault_layer_index",
+    "fault_op_type",
+    "fault_bit_categories",
     "total_steps",
     "last_k_steps",
     "num_steps_used",
@@ -72,8 +84,9 @@ class PairConfiguration:
         return FeatureSpec(
             selected_layer_pairs=self.pairs,
             distance_pairs=self.pairs,
-            last_k_steps=50,
+            last_k_steps=2,
             finite_only=True,
+            step_window="prefix",
         )
 
 
@@ -92,6 +105,13 @@ def pair_configurations(layer_count: int) -> tuple[PairConfiguration, ...]:
     all_sources = tuple(range(last_source + 1))
     return (
         PairConfiguration("current", CURRENT_PAIRS),
+        *(
+            PairConfiguration(
+                f"without_p{removed[0]}_{removed[1]}",
+                tuple(pair for pair in CURRENT_PAIRS if pair != removed),
+            )
+            for removed in CURRENT_PAIRS
+        ),
         PairConfiguration(
             "spread_6",
             tuple((source, source + 1) for source in spread_sources),
@@ -155,11 +175,17 @@ def extract_all_pairs(
     dataset_root: Path,
     max_samples: int | None,
     overwrite: bool,
-) -> tuple[Path, Path]:
-    train_path = dataset_root / "all_pairs_cache/train.csv"
-    valid_path = dataset_root / "all_pairs_cache/valid.csv"
-    if train_path.is_file() and valid_path.is_file() and not overwrite:
-        return train_path, valid_path
+) -> tuple[Path, Path, Path]:
+    fit_path = dataset_root / "all_pairs_cache/fit.csv"
+    calibration_path = dataset_root / "all_pairs_cache/calibration.csv"
+    test_path = dataset_root / "all_pairs_cache/test.csv"
+    if (
+        fit_path.is_file()
+        and calibration_path.is_file()
+        and test_path.is_file()
+        and not overwrite
+    ):
+        return fit_path, calibration_path, test_path
 
     job = FeatureJob(
         name=f"{base_job.name}_all_adjacent_design_ablation",
@@ -167,30 +193,37 @@ def extract_all_pairs(
         dataset=base_job.dataset,
         uid_namespace=base_job.uid_namespace,
         input_path=base_job.input_path,
-        train_output=train_path,
-        valid_output=valid_path,
+        fit_output=fit_path,
+        calibration_output=calibration_path,
+        test_output=test_path,
+        split_manifest=base_job.split_manifest,
         group_column=base_job.group_column,
-        valid_ratio=base_job.valid_ratio,
-        random_state=base_job.random_state,
         spec=all_pairs.spec,
     )
     summary = execute_feature_job(job, max_samples=max_samples)
     _write_json(dataset_root / "all_pairs_cache/extraction_summary.json", summary)
-    return train_path, valid_path
+    return fit_path, calibration_path, test_path
 
 
 def materialize(
     *,
-    source_train: pd.DataFrame,
-    source_valid: pd.DataFrame,
+    source_fit: pd.DataFrame,
+    source_calibration: pd.DataFrame,
+    source_test: pd.DataFrame,
     configuration: PairConfiguration,
     destination: Path,
     overwrite: bool,
-) -> tuple[Path, Path]:
-    train_path = destination / "train_data/train.csv"
-    valid_path = destination / "train_data/valid.csv"
-    if train_path.is_file() and valid_path.is_file() and not overwrite:
-        return train_path, valid_path
+) -> tuple[Path, Path, Path]:
+    fit_path = destination / "train_data/fit.csv"
+    calibration_path = destination / "train_data/calibration.csv"
+    test_path = destination / "train_data/test.csv"
+    if (
+        fit_path.is_file()
+        and calibration_path.is_file()
+        and test_path.is_file()
+        and not overwrite
+    ):
+        return fit_path, calibration_path, test_path
 
     columns = [
         *META_COLUMNS,
@@ -198,20 +231,23 @@ def materialize(
         *TARGET_COLUMNS,
     ]
     missing = sorted(
-        (set(columns) - set(source_train))
-        | (set(columns) - set(source_valid))
+        (set(columns) - set(source_fit))
+        | (set(columns) - set(source_calibration))
+        | (set(columns) - set(source_test))
     )
     if missing:
         raise ValueError(f"{configuration.name} missing columns: {missing}")
-    _write_csv(source_train.loc[:, columns], train_path)
-    _write_csv(source_valid.loc[:, columns], valid_path)
-    return train_path, valid_path
+    _write_csv(source_fit.loc[:, columns], fit_path)
+    _write_csv(source_calibration.loc[:, columns], calibration_path)
+    _write_csv(source_test.loc[:, columns], test_path)
+    return fit_path, calibration_path, test_path
 
 
 def train(
     *,
-    train_path: Path,
-    valid_path: Path,
+    fit_path: Path,
+    calibration_path: Path,
+    test_path: Path,
     destination: Path,
     config: XGBoostConfig,
     overwrite: bool,
@@ -219,11 +255,12 @@ def train(
     summary_path = destination / "output/metrics_summary.json"
     if summary_path.is_file() and not overwrite:
         return json.loads(summary_path.read_text(encoding="utf-8"))
-    return run_xgboost(
-        train_path,
-        valid_path,
+    return run_calibrated_xgboost(
+        fit_path,
+        calibration_path,
+        test_path,
         destination / "output",
-        group_column="orig_id",
+        group_column="semantic_group_id",
         config=config,
     )
 
@@ -237,10 +274,10 @@ def summary_rows(
 ) -> list[dict[str, Any]]:
     rows = []
     for split_name, slice_name in (
-        ("valid_full_metrics", "full"),
-        ("valid_non_all_nan_metrics", "non_all_feature_nan"),
+        ("test_full", "full"),
+        ("test_finite", "finite"),
     ):
-        target = summary[split_name]["target_significant_sdc"]
+        target = summary["metrics"][split_name]["target_significant_sdc"]
         rows.append(
             {
                 "model": model,
@@ -314,13 +351,12 @@ def main() -> int:
     config_path = args.config.resolve()
     model_info = MODELS[args.model]
     model_key = str(model_info["key"])
-    model_directory = str(model_info["directory"])
     layer_count = int(model_info["layer_count"])
     dataset_key = DATASETS[args.dataset]
     output_base = (
         args.output_root.resolve()
         if args.output_root is not None
-        else root / model_directory / "pair_ablation_design_20260813"
+        else root / "artifacts/iclr_v2/ablations/layer_pairs" / model_key
     )
     dataset_root = output_base / args.dataset
     configurations = pair_configurations(layer_count)
@@ -329,21 +365,23 @@ def main() -> int:
         f"{model_key}_{dataset_key}",
         repository_root=root,
     )
-    train_path, valid_path = extract_all_pairs(
+    fit_path, calibration_path, test_path = extract_all_pairs(
         base_job=base_job,
         all_pairs=configurations[-1],
         dataset_root=dataset_root,
         max_samples=args.max_samples,
         overwrite=args.overwrite,
     )
-    source_train = pd.read_csv(train_path)
-    source_valid = pd.read_csv(valid_path)
+    source_fit = pd.read_csv(fit_path)
+    source_calibration = pd.read_csv(calibration_path)
+    source_test = pd.read_csv(test_path)
 
-    paths: dict[str, tuple[Path, Path]] = {}
+    paths: dict[str, tuple[Path, Path, Path]] = {}
     for configuration in configurations:
         paths[configuration.name] = materialize(
-            source_train=source_train,
-            source_valid=source_valid,
+            source_fit=source_fit,
+            source_calibration=source_calibration,
+            source_test=source_test,
             configuration=configuration,
             destination=dataset_root / configuration.name,
             overwrite=args.overwrite,
@@ -359,10 +397,15 @@ def main() -> int:
             f"{configuration.name} pairs={len(configuration.pairs)}",
             flush=True,
         )
-        configuration_train, configuration_valid = paths[configuration.name]
+        (
+            configuration_fit,
+            configuration_calibration,
+            configuration_test,
+        ) = paths[configuration.name]
         result = train(
-            train_path=configuration_train,
-            valid_path=configuration_valid,
+            fit_path=configuration_fit,
+            calibration_path=configuration_calibration,
+            test_path=configuration_test,
             destination=dataset_root / configuration.name,
             config=config,
             overwrite=args.overwrite,

@@ -340,7 +340,10 @@ def replot_layer_figures(
 
 
 def replot_projection(root: Path, output_dir: Path, dpi: int) -> None:
-    summary = json.loads((root / "analysis/qwen_lingoqa_projection_preservation.json").read_text(encoding="utf-8"))
+    summary_path = (
+        root / "analysis/iclr_v2/qwen_lingoqa_projection_preservation.json"
+    )
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
     _plot_results(
         summary,
         output_dir / "qwen_lingoqa_projection_preservation.png",

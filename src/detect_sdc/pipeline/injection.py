@@ -12,9 +12,12 @@ from ..adapters import load_dataset_adapter, load_model_adapter
 from ..adapters.datasets.base import DatasetAdapter, DatasetSample
 from ..adapters.models.base import ModelAdapter
 from ..adapters.registry import import_symbol
+from ..config import load_yaml
+from ..dataset_splits import DatasetSplitManifest
 from ..fault_injector import FaultInjector
 from ..profiler import Profiler
 from .jobs import load_pipeline_job
+from .split import load_configured_split_manifest
 
 
 @dataclass(frozen=True)
@@ -63,7 +66,7 @@ def load_clean_answers(path: str | Path) -> CleanAnswerIndex:
 class _InjectionResumeState:
     start_run_index: int
     rows_written: int
-    significant_rows: int
+    sdc_rows: int
 
 
 def run_injection_samples(
@@ -80,19 +83,29 @@ def run_injection_samples(
     projection_method: str,
     profiler_seed: int,
     fault_runs: int,
-    retain_all_fault_runs: int,
     num_bits: int,
     fault_seed: int,
+    bit_policy: str = "random",
+    telemetry_max_steps: int | None = None,
+    split_manifest: DatasetSplitManifest | None = None,
     overwrite: bool = False,
     resume_from_run: int | None = None,
     profiler_factory: Callable[..., Any] = Profiler,
     injector_factory: Callable[..., Any] = FaultInjector,
+    auxiliary_monitor_factory: Callable[[Any], Any] | None = None,
+    auxiliary_scorer: Callable[[Any], Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    bit_policy = str(bit_policy).strip().lower()
+    if (auxiliary_monitor_factory is None) != (auxiliary_scorer is None):
+        raise ValueError(
+            "auxiliary_monitor_factory and auxiliary_scorer must be "
+            "provided together"
+        )
     _validate_injection_parameters(
         max_samples=max_samples,
         fault_runs=fault_runs,
-        retain_all_fault_runs=retain_all_fault_runs,
         num_bits=num_bits,
+        bit_policy=bit_policy,
         resume_from_run=resume_from_run,
     )
     destination = Path(output_path).resolve()
@@ -120,10 +133,11 @@ def run_injection_samples(
 
     profiler = None
     injector = None
+    auxiliary_monitor = None
     if resume_state is None:
         total_generated = 0
         rows_written = 0
-        significant_rows = 0
+        sdc_rows = 0
         run_indices = [None, *range(fault_runs)]
         stream_mode = "w"
     else:
@@ -132,7 +146,7 @@ def run_injection_samples(
             sample_count = min(sample_count, max_samples)
         total_generated = sample_count * (resume_from_run + 1)
         rows_written = resume_state.rows_written
-        significant_rows = resume_state.significant_rows
+        sdc_rows = resume_state.sdc_rows
         run_indices = list(range(resume_from_run, fault_runs))
         stream_mode = "a"
     try:
@@ -146,6 +160,9 @@ def run_injection_samples(
         )
         injector = injector_factory(model_adapter.model, mode="activation")
         profiler.register()
+        if auxiliary_monitor_factory is not None:
+            auxiliary_monitor = auxiliary_monitor_factory(model_adapter.model)
+            auxiliary_monitor.register()
 
         with temporary.open(stream_mode, encoding="utf-8") as stream:
             for run_index in run_indices:
@@ -156,12 +173,36 @@ def run_injection_samples(
                 for sequence_id, sample in enumerate(
                     dataset_adapter.iter_samples(max_samples=max_samples)
                 ):
+                    assignment = (
+                        None
+                        if split_manifest is None
+                        else split_manifest.assignment_for_orig_id(
+                            sample.orig_id
+                        )
+                    )
+                    if assignment is not None and assignment.sequence_id != sequence_id:
+                        raise ValueError(
+                            "Dataset iteration order differs from split manifest "
+                            f"for {sample.orig_id}"
+                        )
+                    if (
+                        assignment is not None
+                        and assignment.semantic_group_id
+                        != sample.semantic_group_id
+                    ):
+                        raise ValueError(
+                            "Dataset semantic_group_id differs from split "
+                            f"manifest for {sample.orig_id}"
+                        )
                     profiler.reset(clear_stats=True)
                     injector.reset()
                     if injected:
                         injector.set_num_bits(num_bits)
+                        injector.set_bit_policy(bit_policy)
                         injector.inject()
                     injector.register_step_hooks()
+                    if auxiliary_monitor is not None:
+                        auxiliary_monitor.start_sample()
                     try:
                         prediction = model_adapter.generate(
                             sample.question,
@@ -174,10 +215,34 @@ def run_injection_samples(
                                 predictor_model=mapping_model,
                                 device=device,
                                 include_vectors=False,
+                                max_steps=telemetry_max_steps,
+                            )
+                        )
+                        auxiliary_values = (
+                            {}
+                            if auxiliary_monitor is None
+                            else dict(
+                                auxiliary_scorer(
+                                    auxiliary_monitor.finish_sample()
+                                )
                             )
                         )
                     finally:
                         injector.unregister_hooks()
+
+                    if injected:
+                        injection_succeeded = bool(
+                            getattr(
+                                injector,
+                                "select_target_has_injected",
+                                injector.fault_info is not None,
+                            )
+                        )
+                        if not injection_succeeded or injector.fault_info is None:
+                            raise RuntimeError(
+                                "Activation fault hook did not inject for "
+                                f"orig_id={sample.orig_id}, run={run_index}"
+                            )
 
                     clean_answer = clean_answers.get(
                         sequence_id,
@@ -185,30 +250,31 @@ def run_injection_samples(
                     )
                     is_sdc = clean_answer.strip() != prediction.strip()
                     total_generated += 1
-                    significant_rows += int(is_sdc)
-                    if (
-                        not injected
-                        or run_index < retain_all_fault_runs
-                        or is_sdc
-                    ):
-                        record = _build_result_record(
-                            sequence_id,
-                            sample,
-                            clean_answer,
-                            prediction,
-                            telemetry,
-                            injector.fault_info,
-                            run_index=run_index,
-                            injected=injected,
+                    sdc_rows += int(is_sdc)
+                    record = _build_result_record(
+                        sequence_id,
+                        sample,
+                        clean_answer,
+                        prediction,
+                        telemetry,
+                        injector.fault_info,
+                        run_index=run_index,
+                        injected=injected,
+                        split=(
+                            None
+                            if assignment is None
+                            else assignment.split
+                        ),
+                        auxiliary_values=auxiliary_values,
+                    )
+                    stream.write(
+                        json.dumps(
+                            _json_safe(record),
+                            ensure_ascii=False,
                         )
-                        stream.write(
-                            json.dumps(
-                                _json_safe(record),
-                                ensure_ascii=False,
-                            )
-                            + "\n"
-                        )
-                        rows_written += 1
+                        + "\n"
+                    )
+                    rows_written += 1
     except BaseException:
         if resume_state is None:
             temporary.unlink(missing_ok=True)
@@ -218,17 +284,21 @@ def run_injection_samples(
             injector.unregister_hooks()
         if profiler is not None:
             profiler.unregister()
+        if auxiliary_monitor is not None:
+            auxiliary_monitor.unregister()
         model_adapter.close()
 
     temporary.replace(destination)
     return {
         "generated": total_generated,
         "rows_written": rows_written,
-        "sdc_rows_observed": significant_rows,
+        "sdc_rows_observed": sdc_rows,
         "clean_runs": 1,
         "fault_runs": fault_runs,
-        "retain_all_fault_runs": retain_all_fault_runs,
+        "retention_policy": "all_runs",
         "num_bits": num_bits,
+        "bit_policy": bit_policy,
+        "telemetry_max_steps": telemetry_max_steps,
         "resumed_from_run": resume_from_run,
         "output": str(destination),
     }
@@ -246,6 +316,9 @@ def run_injection_job(
     mapping_model_path: str | Path | None = None,
     overwrite: bool = False,
     resume_from_run: int | None = None,
+    telemetry_max_steps: int | None = None,
+    auxiliary_monitor_factory: Callable[[Any], Any] | None = None,
+    auxiliary_scorer: Callable[[Any], Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     job = load_pipeline_job(
         config_path,
@@ -253,6 +326,21 @@ def run_injection_job(
         repository_root=repository_root,
     )
     injection = job.injection_config
+    experiment = load_yaml(config_path)
+    features = experiment.get("features", {})
+    if not isinstance(features, Mapping):
+        raise ValueError("Experiment features must be a mapping")
+    configured_max_steps = int(features.get("last_k_steps", 2))
+    if telemetry_max_steps is None:
+        telemetry_max_steps = configured_max_steps
+    if telemetry_max_steps <= 0:
+        raise ValueError("telemetry_max_steps must be positive")
+    if features.get("step_window") != "prefix":
+        raise ValueError("Injection telemetry requires prefix step_window")
+    split_manifest = load_configured_split_manifest(
+        job.dataset_config,
+        repository_root=repository_root,
+    )
     checkpoint = Path(mapping_model_path or job.paths.mapping_model).resolve()
     mapping_model = load_mapping_model(injection, checkpoint, device=device)
 
@@ -269,13 +357,15 @@ def run_injection_job(
         projection_method=job.projection_method,
         profiler_seed=job.profiler_seed,
         fault_runs=int(injection.get("fault_runs", 10)),
-        retain_all_fault_runs=int(
-            injection.get("retain_all_fault_runs", 1)
-        ),
         num_bits=int(injection.get("num_bits", 2)),
         fault_seed=int(injection.get("seed", 42)),
+        bit_policy=str(injection.get("bit_policy", "random")),
+        telemetry_max_steps=telemetry_max_steps,
+        split_manifest=split_manifest,
         overwrite=overwrite,
         resume_from_run=resume_from_run,
+        auxiliary_monitor_factory=auxiliary_monitor_factory,
+        auxiliary_scorer=auxiliary_scorer,
     )
     summary.update(
         {
@@ -319,12 +409,16 @@ def _build_result_record(
     *,
     run_index: int | None,
     injected: bool,
+    split: str | None,
+    auxiliary_values: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     metadata = dict(sample.metadata)
     run_identity = "clean" if not injected else f"fault:{run_index}"
     record = {
         "id": sequence_id,
         "orig_id": sample.orig_id,
+        "semantic_group_id": sample.semantic_group_id,
+        "split": split,
         "sample_uid": f"{sample.orig_id}:{run_identity}",
         "before_score": 0.0,
         "after_score": 0.0,
@@ -345,6 +439,12 @@ def _build_result_record(
             record[key] = metadata[key]
     if "image_filename" in metadata and "image_path" not in record:
         record["image_path"] = metadata["image_filename"]
+    for key, value in dict(auxiliary_values or {}).items():
+        if key in record:
+            raise ValueError(
+                f"Auxiliary score collides with canonical field: {key}"
+            )
+        record[str(key)] = value
     return record
 
 
@@ -352,20 +452,21 @@ def _validate_injection_parameters(
     *,
     max_samples: int | None,
     fault_runs: int,
-    retain_all_fault_runs: int,
     num_bits: int,
+    bit_policy: str,
     resume_from_run: int | None,
 ) -> None:
     if max_samples is not None and max_samples <= 0:
         raise ValueError("max_samples must be positive")
     if fault_runs < 0:
         raise ValueError("fault_runs must be non-negative")
-    if not 0 <= retain_all_fault_runs <= fault_runs:
-        raise ValueError(
-            "retain_all_fault_runs must be between 0 and fault_runs"
-        )
     if num_bits <= 0:
         raise ValueError("num_bits must be positive")
+    if bit_policy not in FaultInjector.BIT_POLICIES:
+        raise ValueError(
+            f"bit_policy must be one of {FaultInjector.BIT_POLICIES}, "
+            f"got {bit_policy!r}"
+        )
     if resume_from_run is not None and not 0 <= resume_from_run < fault_runs:
         raise ValueError(
             "resume_from_run must identify an existing fault run"
@@ -386,7 +487,7 @@ def _prepare_injection_resume(
     recovery = temporary.with_name(f"{temporary.name}.resume")
     recovery.unlink(missing_ok=True)
     rows_written = 0
-    significant_rows = 0
+    sdc_rows = 0
     last_fault_run: int | None = None
     try:
         with (
@@ -426,7 +527,7 @@ def _prepare_injection_resume(
                 if run_index is None or run_index < resume_from_run:
                     destination.write(line)
                     rows_written += 1
-                    significant_rows += int(bool(record.get("is_sdc", 0)))
+                    sdc_rows += int(bool(record.get("is_sdc", 0)))
 
         if last_fault_run != resume_from_run:
             raise ValueError(
@@ -441,7 +542,7 @@ def _prepare_injection_resume(
     return _InjectionResumeState(
         start_run_index=resume_from_run,
         rows_written=rows_written,
-        significant_rows=significant_rows,
+        sdc_rows=sdc_rows,
     )
 
 

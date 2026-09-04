@@ -1,0 +1,385 @@
+{
+  "schema_version": 1,
+  "dataset": "earthvqa_smoke",
+  "seed": 42,
+  "ratios": {
+    "fit": 0.7,
+    "calibration": 0.15,
+    "test": 0.15
+  },
+  "sample_count": 60,
+  "group_count": 30,
+  "sample_counts": {
+    "fit": 42,
+    "calibration": 8,
+    "test": 10
+  },
+  "group_counts": {
+    "fit": 21,
+    "calibration": 4,
+    "test": 5
+  },
+  "assignment_sha256": "1ba563f297a1fe80aa37aeb3dcb6b0390a2b7e4c723ffb9bcd9626e3e1ba4a74",
+  "assignments": [
+    {
+      "sequence_id": 0,
+      "orig_id": "275.png:19",
+      "semantic_group_id": "275.png",
+      "split": "test"
+    },
+    {
+      "sequence_id": 1,
+      "orig_id": "275.png:24",
+      "semantic_group_id": "275.png",
+      "split": "test"
+    },
+    {
+      "sequence_id": 2,
+      "orig_id": "941.png:19",
+      "semantic_group_id": "941.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 3,
+      "orig_id": "941.png:24",
+      "semantic_group_id": "941.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 4,
+      "orig_id": "739.png:19",
+      "semantic_group_id": "739.png",
+      "split": "calibration"
+    },
+    {
+      "sequence_id": 5,
+      "orig_id": "739.png:24",
+      "semantic_group_id": "739.png",
+      "split": "calibration"
+    },
+    {
+      "sequence_id": 6,
+      "orig_id": "611.png:19",
+      "semantic_group_id": "611.png",
+      "split": "test"
+    },
+    {
+      "sequence_id": 7,
+      "orig_id": "611.png:24",
+      "semantic_group_id": "611.png",
+      "split": "test"
+    },
+    {
+      "sequence_id": 8,
+      "orig_id": "647.png:19",
+      "semantic_group_id": "647.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 9,
+      "orig_id": "647.png:24",
+      "semantic_group_id": "647.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 10,
+      "orig_id": "239.png:19",
+      "semantic_group_id": "239.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 11,
+      "orig_id": "239.png:24",
+      "semantic_group_id": "239.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 12,
+      "orig_id": "1349.png:19",
+      "semantic_group_id": "1349.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 13,
+      "orig_id": "1349.png:24",
+      "semantic_group_id": "1349.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 14,
+      "orig_id": "256.png:19",
+      "semantic_group_id": "256.png",
+      "split": "test"
+    },
+    {
+      "sequence_id": 15,
+      "orig_id": "256.png:24",
+      "semantic_group_id": "256.png",
+      "split": "test"
+    },
+    {
+      "sequence_id": 16,
+      "orig_id": "1086.png:19",
+      "semantic_group_id": "1086.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 17,
+      "orig_id": "1086.png:24",
+      "semantic_group_id": "1086.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 18,
+      "orig_id": "933.png:19",
+      "semantic_group_id": "933.png",
+      "split": "test"
+    },
+    {
+      "sequence_id": 19,
+      "orig_id": "933.png:24",
+      "semantic_group_id": "933.png",
+      "split": "test"
+    },
+    {
+      "sequence_id": 20,
+      "orig_id": "18.png:19",
+      "semantic_group_id": "18.png",
+      "split": "calibration"
+    },
+    {
+      "sequence_id": 21,
+      "orig_id": "18.png:24",
+      "semantic_group_id": "18.png",
+      "split": "calibration"
+    },
+    {
+      "sequence_id": 22,
+      "orig_id": "108.png:19",
+      "semantic_group_id": "108.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 23,
+      "orig_id": "108.png:24",
+      "semantic_group_id": "108.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 24,
+      "orig_id": "835.png:19",
+      "semantic_group_id": "835.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 25,
+      "orig_id": "835.png:24",
+      "semantic_group_id": "835.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 26,
+      "orig_id": "1259.png:19",
+      "semantic_group_id": "1259.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 27,
+      "orig_id": "1259.png:24",
+      "semantic_group_id": "1259.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 28,
+      "orig_id": "591.png:19",
+      "semantic_group_id": "591.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 29,
+      "orig_id": "591.png:24",
+      "semantic_group_id": "591.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 30,
+      "orig_id": "377.png:19",
+      "semantic_group_id": "377.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 31,
+      "orig_id": "377.png:24",
+      "semantic_group_id": "377.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 32,
+      "orig_id": "432.png:19",
+      "semantic_group_id": "432.png",
+      "split": "test"
+    },
+    {
+      "sequence_id": 33,
+      "orig_id": "432.png:24",
+      "semantic_group_id": "432.png",
+      "split": "test"
+    },
+    {
+      "sequence_id": 34,
+      "orig_id": "538.png:19",
+      "semantic_group_id": "538.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 35,
+      "orig_id": "538.png:24",
+      "semantic_group_id": "538.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 36,
+      "orig_id": "952.png:19",
+      "semantic_group_id": "952.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 37,
+      "orig_id": "952.png:24",
+      "semantic_group_id": "952.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 38,
+      "orig_id": "305.png:19",
+      "semantic_group_id": "305.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 39,
+      "orig_id": "305.png:24",
+      "semantic_group_id": "305.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 40,
+      "orig_id": "232.png:19",
+      "semantic_group_id": "232.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 41,
+      "orig_id": "232.png:24",
+      "semantic_group_id": "232.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 42,
+      "orig_id": "413.png:19",
+      "semantic_group_id": "413.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 43,
+      "orig_id": "413.png:24",
+      "semantic_group_id": "413.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 44,
+      "orig_id": "618.png:19",
+      "semantic_group_id": "618.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 45,
+      "orig_id": "618.png:24",
+      "semantic_group_id": "618.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 46,
+      "orig_id": "1197.png:19",
+      "semantic_group_id": "1197.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 47,
+      "orig_id": "1197.png:24",
+      "semantic_group_id": "1197.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 48,
+      "orig_id": "784.png:19",
+      "semantic_group_id": "784.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 49,
+      "orig_id": "784.png:24",
+      "semantic_group_id": "784.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 50,
+      "orig_id": "712.png:19",
+      "semantic_group_id": "712.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 51,
+      "orig_id": "712.png:24",
+      "semantic_group_id": "712.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 52,
+      "orig_id": "626.png:19",
+      "semantic_group_id": "626.png",
+      "split": "calibration"
+    },
+    {
+      "sequence_id": 53,
+      "orig_id": "626.png:24",
+      "semantic_group_id": "626.png",
+      "split": "calibration"
+    },
+    {
+      "sequence_id": 54,
+      "orig_id": "791.png:19",
+      "semantic_group_id": "791.png",
+      "split": "calibration"
+    },
+    {
+      "sequence_id": 55,
+      "orig_id": "791.png:24",
+      "semantic_group_id": "791.png",
+      "split": "calibration"
+    },
+    {
+      "sequence_id": 56,
+      "orig_id": "1298.png:19",
+      "semantic_group_id": "1298.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 57,
+      "orig_id": "1298.png:24",
+      "semantic_group_id": "1298.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 58,
+      "orig_id": "669.png:19",
+      "semantic_group_id": "669.png",
+      "split": "fit"
+    },
+    {
+      "sequence_id": 59,
+      "orig_id": "669.png:24",
+      "semantic_group_id": "669.png",
+      "split": "fit"
+    }
+  ]
+}

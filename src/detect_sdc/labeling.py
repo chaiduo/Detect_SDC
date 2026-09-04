@@ -50,6 +50,7 @@ Score 0: The response has a major semantic deviation from the reference answer, 
 class LabelStatus(str, Enum):
     VALID = "valid"
     IDENTICAL_ANSWER = "identical_answer"
+    EMPTY_RESPONSE = "empty_response"
     PARSE_ERROR = "parse_error"
 
 
@@ -205,12 +206,16 @@ def label_records(
     pending_indices = []
     pending_items = []
     for index, item in enumerate(results):
-        if str(item.get("pred_answer", "")) == str(
-            item.get("clean_answer", "")
-        ):
+        predicted = str(item.get("pred_answer", ""))
+        clean = str(item.get("clean_answer", ""))
+        if predicted == clean:
             item["quality_score"] = 2
             item["significance"] = 0
             item["label_status"] = LabelStatus.IDENTICAL_ANSWER.value
+        elif clean.strip() and not predicted.strip():
+            item["quality_score"] = 0
+            item["significance"] = 2
+            item["label_status"] = LabelStatus.EMPTY_RESPONSE.value
         else:
             pending_indices.append(index)
             pending_items.append(item)

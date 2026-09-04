@@ -1,5 +1,8 @@
 # 单指标–单统计量紧凑特征消融
 
+> **历史 ICLR-v1 结果**：本页数值使用旧 split 和 Detector 协议，仅供回归参考；v2 正式重跑后需整体替换。
+
+
 ## 实验设置
 
 我们将四种差异指标（CosSim、MeanDiff、StdDiff 和 L2Distance）与三种

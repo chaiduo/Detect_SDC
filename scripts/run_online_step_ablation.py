@@ -18,7 +18,7 @@ from detect_sdc.config import load_yaml
 from detect_sdc.detector.xgboost import (
     XGBoostConfig,
     all_feature_nan_mask,
-    run_xgboost,
+    run_calibrated_xgboost,
 )
 from detect_sdc.features.extraction import (
     FeatureSpec,
@@ -43,7 +43,16 @@ MODELS = {
 }
 META_COLUMNS = (
     "orig_id",
+    "semantic_group_id",
+    "split",
     "sample_uid",
+    "injected",
+    "run_index",
+    "is_sdc",
+    "fault_component",
+    "fault_layer_index",
+    "fault_op_type",
+    "fault_bit_categories",
     "total_steps",
     "last_k_steps",
     "num_steps_used",
@@ -67,6 +76,12 @@ def parse_args() -> argparse.Namespace:
         "--config",
         type=Path,
         default=root / "configs/experiments/current.yaml",
+    )
+    parser.add_argument(
+        "--input",
+        type=Path,
+        required=True,
+        help="Labeled JSONL collected with telemetry_max_steps=50.",
     )
     parser.add_argument("--output-root", type=Path, default=None)
     parser.add_argument("--overwrite-features", action="store_true")
@@ -213,85 +228,65 @@ def prepare_splits(
 ) -> dict[str, Any]:
     manifest_path = output_root / "fixed_cohort.json"
     split_paths = [
-        output_root / f"k_{k}/train_data/train.csv"
+        output_root / f"k_{k}/train_data/{name}.csv"
         for k in K_VALUES
-    ] + [
-        output_root / f"k_{k}/train_data/valid_fixed_k50.csv"
-        for k in K_VALUES
+        for name in ("fit", "calibration", "test_fixed_k2")
     ]
-    if manifest_path.is_file() and all(path.is_file() for path in split_paths) and not overwrite:
+    if (
+        manifest_path.is_file()
+        and all(path.is_file() for path in split_paths)
+        and not overwrite
+    ):
         return json.loads(manifest_path.read_text(encoding="utf-8"))
 
-    baseline = pd.read_csv(output_root / "k_50/features/all.csv")
+    baseline = pd.read_csv(output_root / "k_2/features/all.csv")
     validate_identity_columns(
         baseline,
         group_column=base_job.group_column,
         sample_uid_column="sample_uid",
     )
-    source_train = pd.read_csv(
-        base_job.train_output,
-        usecols=["sample_uid"],
-    )
-    source_valid = pd.read_csv(
-        base_job.valid_output,
-        usecols=["sample_uid"],
-    )
-    train_uids = set(source_train["sample_uid"].astype(str))
-    source_valid_uids = set(source_valid["sample_uid"].astype(str))
-    baseline_uids = set(baseline["sample_uid"].astype(str))
-    if train_uids & source_valid_uids:
-        raise ValueError("Main train and validation sample UIDs overlap")
-    if train_uids | source_valid_uids != baseline_uids:
-        raise ValueError("Prefix features do not match the main experiment split")
-
-    baseline_uid = baseline["sample_uid"].astype(str)
-    baseline_train = baseline.loc[baseline_uid.isin(train_uids)].copy()
-    baseline_valid = baseline.loc[
-        baseline_uid.isin(source_valid_uids)
+    baseline_test = baseline.loc[baseline["split"] == "test"].copy()
+    fixed_test = baseline_test.loc[
+        ~all_feature_nan_mask(baseline_test, feature_columns(specs[2]))
     ].copy()
-    baseline_columns = feature_columns(specs[50])
-    fixed_valid = baseline_valid.loc[
-        ~all_feature_nan_mask(baseline_valid, baseline_columns)
-    ].copy()
-    valid_uids = set(fixed_valid["sample_uid"].astype(str))
+    test_uids = set(fixed_test["sample_uid"].astype(str))
 
     for k in K_VALUES:
         frame = pd.read_csv(output_root / f"k_{k}/features/all.csv")
         uids = frame["sample_uid"].astype(str)
-        train = frame.loc[uids.isin(train_uids)].copy()
-        valid = frame.loc[uids.isin(valid_uids)].copy()
-        if len(train) != len(train_uids) or len(valid) != len(valid_uids):
-            raise ValueError(f"K={k} does not match the K=50 sample cohort")
-        _write_csv(train, output_root / f"k_{k}/train_data/train.csv")
+        fit = frame.loc[frame["split"] == "fit"].copy()
+        calibration = frame.loc[frame["split"] == "calibration"].copy()
+        test = frame.loc[uids.isin(test_uids)].copy()
+        if len(test) != len(test_uids):
+            raise ValueError(f"K={k} does not match the fixed K=2 cohort")
+        _write_csv(fit, output_root / f"k_{k}/train_data/fit.csv")
         _write_csv(
-            valid,
-            output_root / f"k_{k}/train_data/valid_fixed_k50.csv",
+            calibration,
+            output_root / f"k_{k}/train_data/calibration.csv",
+        )
+        _write_csv(
+            test,
+            output_root / f"k_{k}/train_data/test_fixed_k2.csv",
         )
 
     target = pd.to_numeric(
-        fixed_valid["significant_sdc_target"],
+        fixed_test["significant_sdc_target"],
         errors="raise",
     ).astype(int)
     manifest = {
         "definition": (
-            "Main-experiment validation rows with at least one finite "
-            "K=50 detector feature"
+            "Final-test rows with at least one finite K=2 detector feature"
         ),
         "step_window": "prefix",
-        "train_rows": len(baseline_train),
-        "validation_rows_before_filter": len(baseline_valid),
-        "validation_rows": len(fixed_valid),
+        "test_rows_before_filter": len(baseline_test),
+        "test_rows": len(fixed_test),
         "positive_samples": int(target.sum()),
         "negative_samples": int(len(target) - target.sum()),
-        "sample_uid_sha256": _uid_digest(fixed_valid["sample_uid"]),
-        "split_source": "main_experiment_feature_csv",
-        "train_sample_uid_sha256": _uid_digest(
-            baseline_train["sample_uid"]
-        ),
+        "sample_uid_sha256": _uid_digest(fixed_test["sample_uid"]),
+        "split_source": str(base_job.split_manifest),
     }
     _write_json(manifest_path, manifest)
     return manifest
-
 
 def train_detectors(
     *,
@@ -308,20 +303,18 @@ def train_detectors(
         if summary_path.is_file() and not overwrite:
             summary = json.loads(summary_path.read_text(encoding="utf-8"))
         else:
-            print(
-                f"[prefix-train] {model} {dataset} K={k}",
-                flush=True,
-            )
-            summary = run_xgboost(
-                root / "train_data/train.csv",
-                root / "train_data/valid_fixed_k50.csv",
+            print(f"[prefix-train] {model} {dataset} K={k}", flush=True)
+            summary = run_calibrated_xgboost(
+                root / "train_data/fit.csv",
+                root / "train_data/calibration.csv",
+                root / "train_data/test_fixed_k2.csv",
                 root / "output",
-                group_column="orig_id",
+                group_column="semantic_group_id",
                 config=config,
             )
-        metrics = summary["valid_full_metrics"]["target_significant_sdc"]
-        valid = pd.read_csv(
-            root / "train_data/valid_fixed_k50.csv",
+        metrics = summary["metrics"]["test_full"]["target_significant_sdc"]
+        test = pd.read_csv(
+            root / "train_data/test_fixed_k2.csv",
             usecols=["total_steps", "num_steps_used"],
         )
         rows.append(
@@ -330,58 +323,20 @@ def train_detectors(
                 "dataset": dataset,
                 "k": k,
                 "step_window": "prefix",
-                "evaluation_cohort": "fixed_k50_non_all_nan",
-                "validation_rows": len(valid),
-                "mean_steps_used": float(valid["num_steps_used"].mean()),
-                "median_steps_used": float(valid["num_steps_used"].median()),
-                "p95_steps_used": float(
-                    np.percentile(valid["num_steps_used"], 95)
-                ),
-                "finished_before_k_share": float(
-                    (valid["total_steps"] < k).mean()
-                ),
+                "evaluation_cohort": "fixed_k2_non_all_nan",
+                "test_rows": len(test),
+                "mean_steps_used": float(test["num_steps_used"].mean()),
+                "median_steps_used": float(test["num_steps_used"].median()),
+                "p95_steps_used": float(np.percentile(test["num_steps_used"], 95)),
+                "finished_before_k_share": float((test["total_steps"] < k).mean()),
                 **{
                     key: metrics[key]
-                    for key in (
-                        "precision",
-                        "recall",
-                        "f1",
-                        "tp",
-                        "fp",
-                        "fn",
-                        "tn",
-                    )
+                    for key in ("precision", "recall", "f1", "tp", "fp", "fn", "tn")
                 },
             }
         )
         _write_summary(output_root / "summary.csv", rows)
     return rows
-
-
-def verify_baseline(
-    *,
-    rows: list[dict[str, Any]],
-    main_summary_path: Path,
-) -> None:
-    main = json.loads(main_summary_path.read_text(encoding="utf-8"))
-    expected = main["model_summary"]["valid_non_all_nan_metrics"][
-        "target_significant_sdc"
-    ]
-    actual = next(row for row in rows if row["k"] == 50)
-    fields = ("precision", "recall", "f1", "tp", "fp", "fn", "tn")
-    mismatches = {
-        field: (actual[field], expected[field])
-        for field in fields
-        if not np.isclose(
-            float(actual[field]),
-            float(expected[field]),
-            rtol=0.0,
-            atol=1e-15,
-        )
-    }
-    if mismatches:
-        raise AssertionError(f"K=50 does not reproduce main experiment: {mismatches}")
-
 
 def _write_csv(frame: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -430,7 +385,7 @@ def main() -> int:
     output_base = (
         args.output_root.resolve()
         if args.output_root is not None
-        else root / model_directory / "online_step_ablation_20260814"
+        else root / "artifacts/iclr_v2/ablations/online_step" / model_key
     )
     output_root = output_base / args.dataset
     job = load_feature_job(
@@ -440,7 +395,7 @@ def main() -> int:
     )
     specs = prefix_specs(job.spec)
     extract_prefix_features(
-        input_path=job.input_path,
+        input_path=args.input.resolve(),
         uid_namespace=job.uid_namespace,
         specs=specs,
         output_root=output_root,
@@ -460,12 +415,6 @@ def main() -> int:
         config=detector_config(config_path, model_key),
         overwrite=args.overwrite_detectors,
     )
-    if args.max_samples is None:
-        verify_baseline(
-            rows=rows,
-            main_summary_path=root / model_directory / args.dataset
-            / "output/metrics_summary.json",
-        )
     return 0
 
 

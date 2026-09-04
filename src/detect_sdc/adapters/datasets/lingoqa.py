@@ -66,6 +66,7 @@ class LingoQAAdapter:
                     return
                 yield DatasetSample(
                     orig_id=orig_id,
+                    semantic_group_id=str(row.question_id),
                     question=str(row.question).strip(),
                     ground_truth=str(row.answer),
                     image=self.images / str(relative_path),

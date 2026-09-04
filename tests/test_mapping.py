@@ -20,60 +20,55 @@ JOB_NAMES = (
     "llava15_earthvqa",
     "llava15_lingoqa",
     "llava15_vqav2",
+    "internvl3_earthvqa",
+    "internvl3_lingoqa",
+    "internvl3_vqav2",
 )
 
 
 class _SizedDataset:
+    group_ids = tuple(
+        f"group-{index // 5}" for index in range(100)
+    )
+
     def __len__(self):
         return 100
 
 
 class MappingTrainingTest(unittest.TestCase):
-    def test_historical_split_contracts_are_preserved(self):
-        sequential = split_mapping_dataset(
-            _SizedDataset(),
-            strategy="sequential",
-            valid_ratio=0.15,
-            test_ratio=0.1,
-            test_ratio_in_train=0.15,
-            seed=42,
-        )
-        self.assertEqual(sequential.train.indices, list(range(73)))
-        self.assertEqual(sequential.selection.indices, list(range(73, 85)))
-        self.assertEqual(sequential.final.indices, list(range(85, 100)))
+    def test_mapping_model_defaults_match_canonical_architecture(self):
+        model = LayerAwareResidualMLP()
 
-        random_split = split_mapping_dataset(
-            _SizedDataset(),
-            strategy="random",
-            valid_ratio=0.1,
-            test_ratio=0.1,
-            test_ratio_in_train=0.15,
-            seed=42,
-        )
-        self.assertEqual(len(random_split.train), 80)
-        self.assertEqual(len(random_split.selection), 10)
-        self.assertEqual(len(random_split.final), 10)
-        self.assertEqual(
-            set(random_split.train.indices)
-            & set(random_split.selection.indices),
-            set(),
-        )
-        self.assertEqual(
-            set(random_split.train.indices) & set(random_split.final.indices),
-            set(),
-        )
+        self.assertEqual(model.input_proj.out_features, 64)
+        self.assertEqual(len(model.blocks), 8)
 
-        partition = split_mapping_dataset(
+    def test_mapping_split_is_group_disjoint_and_deterministic(self):
+        first = split_mapping_dataset(
             _SizedDataset(),
-            strategy="partition",
             valid_ratio=0.15,
             test_ratio=0.15,
-            test_ratio_in_train=0.15,
             seed=42,
         )
-        self.assertEqual(partition.train.indices, list(range(70)))
-        self.assertEqual(partition.selection.indices, list(range(70, 85)))
-        self.assertEqual(partition.final.indices, list(range(85, 100)))
+        second = split_mapping_dataset(
+            _SizedDataset(),
+            valid_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        self.assertEqual(first.train.indices, second.train.indices)
+        groups = _SizedDataset.group_ids
+        train_groups = {groups[index] for index in first.train.indices}
+        valid_groups = {
+            groups[index] for index in first.selection.indices
+        }
+        test_groups = {groups[index] for index in first.final.indices}
+        self.assertFalse(train_groups & valid_groups)
+        self.assertFalse(train_groups & test_groups)
+        self.assertFalse(valid_groups & test_groups)
+        self.assertEqual(
+            len(first.train) + len(first.selection) + len(first.final),
+            100,
+        )
 
     def test_all_jobs_use_one_trainer_and_model_class(self):
         config = REPOSITORY_ROOT / "configs/experiments/current.yaml"
@@ -95,18 +90,19 @@ class MappingTrainingTest(unittest.TestCase):
         }
         self.assertEqual(trainers, {train_model})
         self.assertEqual(model_classes, {LayerAwareResidualMLP})
-        self.assertEqual(
-            jobs[2].mapping_training_config["kwargs"]["split_strategy"],
-            "random",
-        )
-        self.assertEqual(
-            jobs[4].mapping_training_config["kwargs"]["cosine_weight"],
-            2.0,
-        )
-        self.assertEqual(
-            jobs[4].injection_config["mapping_kwargs"]["hidden_dim"],
-            1024,
-        )
+        architectures = {
+            (
+                job.injection_config["mapping_kwargs"]["hidden_dim"],
+                job.injection_config["mapping_kwargs"]["num_blocks"],
+            )
+            for job in jobs
+        }
+        self.assertEqual(architectures, {(64, 8)})
+        training_profiles = {
+            tuple(sorted(job.mapping_training_config["kwargs"].items()))
+            for job in jobs
+        }
+        self.assertEqual(len(training_profiles), 1)
 
     def test_shared_trainer_runs_one_cpu_epoch(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -129,6 +125,7 @@ class MappingTrainingTest(unittest.TestCase):
                                 "src_layer": index % 3,
                                 "tgt_layer": index % 3 + 1,
                                 "step": index,
+                                "semantic_group_id": f"group-{index // 3}",
                             }
                         )
                         + "\n"
@@ -148,10 +145,8 @@ class MappingTrainingTest(unittest.TestCase):
                 batch_size=8,
                 epochs=1,
                 num_workers=0,
-                split_strategy="sequential",
                 valid_ratio=0.2,
-                test_ratio=0.1,
-                test_ratio_in_train=0.2,
+                test_ratio=0.2,
                 scheduler_enabled=False,
                 pin_memory=False,
                 persistent_workers=False,

@@ -10,30 +10,18 @@ import json
 import os
 import statistics
 import time
-from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any, Mapping
 
 import numpy as np
-import pandas as pd
 import torch
 import xgboost as xgb
 
 from detect_sdc.adapters import load_dataset_adapter, load_model_adapter
 from detect_sdc.adapters.models.images import load_pil_image
-from detect_sdc.config import load_yaml
-from detect_sdc.detector.xgboost import (
-    XGBoostConfig,
-    add_significant_sdc_target,
-    binary_metrics,
-    get_feature_columns,
-    prepare_features,
-    train_binary_model,
-)
-from detect_sdc.online_monitor import FEATURE_PROFILES, OnlineSieveMonitor
+from detect_sdc.online_monitor import OnlineSieveMonitor
 from detect_sdc.pipeline.injection import load_mapping_model
 from detect_sdc.pipeline.jobs import load_pipeline_job
-from detect_sdc.splitting import split_by_group
 
 
 MODES = ("vanilla", "step_hook", "monitor", "predictor", "sieve")
@@ -54,6 +42,20 @@ class DetectorAdapter:
             values, validate_features=False
         )
         return np.stack((1.0 - positive, positive), axis=1)
+
+
+def load_deployed_detector(
+    summary_path: Path,
+) -> tuple[DetectorAdapter, tuple[str, ...], float, int]:
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    booster = xgb.Booster()
+    booster.load_model(summary["model_path"])
+    return (
+        DetectorAdapter(booster),
+        tuple(summary["feature_columns"]),
+        float(summary["threshold_calibration"]["threshold"]),
+        int(summary["training"]["parameters"]["max_depth"]),
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -81,10 +83,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--online-steps", type=int, default=2)
     parser.add_argument(
         "--feature-profile",
-        choices=FEATURE_PROFILES,
+        choices=("full",),
         default="full",
     )
-    parser.add_argument("--detector-depth", type=int, default=None)
     parser.add_argument(
         "--modes",
         nargs="+",
@@ -101,107 +102,11 @@ def parse_args() -> argparse.Namespace:
     for name in ("samples", "warmup_samples", "repeats", "online_steps"):
         if getattr(args, name) <= 0:
             parser.error(f"--{name.replace('_', '-')} must be positive")
-    if args.detector_depth is not None and args.detector_depth <= 0:
-        parser.error("--detector-depth must be positive")
     if "vanilla" not in args.modes:
         parser.error("--modes must include vanilla")
     if len(set(args.modes)) != len(args.modes):
         parser.error("--modes must be unique")
     return args
-
-
-def detector_config(path: Path, model_key: str) -> XGBoostConfig:
-    config = load_yaml(path)
-    detector = _mapping(config.get("detector"), "detector")
-    xgboost = _mapping(detector.get("xgboost"), "detector.xgboost")
-    values = dict(_mapping(xgboost.get("common"), "xgboost.common"))
-    values.update(
-        _mapping(
-            _mapping(xgboost.get("by_model"), "xgboost.by_model").get(model_key),
-            model_key,
-        )
-    )
-    return XGBoostConfig.from_mapping(values)
-
-
-def prepare_detector(
-    train_csv: Path,
-    valid_csv: Path,
-    destination: Path,
-    config: XGBoostConfig,
-    feature_profile: str,
-    expected_metrics: Mapping[str, Any],
-) -> tuple[DetectorAdapter, tuple[str, ...]]:
-    model_path = destination / "detector.ubj"
-    metadata_path = destination / "detector_metadata.json"
-    if model_path.is_file() and metadata_path.is_file():
-        booster = xgb.Booster()
-        booster.load_model(model_path)
-        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-        best_iteration = metadata["training"].get("best_iteration")
-        if best_iteration is not None:
-            booster = booster[: int(best_iteration) + 1]
-        return DetectorAdapter(booster), tuple(metadata["feature_columns"])
-
-    train = add_significant_sdc_target(pd.read_csv(train_csv))
-    valid = add_significant_sdc_target(pd.read_csv(valid_csv))
-    columns = get_feature_columns(train)
-    if feature_profile == "cos_sim_mean":
-        columns = [
-            column
-            for column in columns
-            if column.startswith("cos_sim_mean_")
-        ]
-        if len(columns) != len(PAIRS):
-            raise ValueError(
-                "CosSim-Mean profile must contain one feature per pair"
-            )
-    split = split_by_group(
-        train,
-        group_column="orig_id",
-        holdout_ratio=config.test_ratio,
-        random_state=config.random_state,
-    )
-    model, training = train_binary_model(
-        prepare_features(split.train, columns),
-        split.train["significant_sdc_target"].astype(int),
-        prepare_features(split.holdout, columns),
-        split.holdout["significant_sdc_target"].astype(int),
-        config=replace(config, verbose=False),
-    )
-    probability = model.predict_proba(prepare_features(valid, columns))
-    metrics = binary_metrics(
-        valid["significant_sdc_target"].astype(int),
-        np.argmax(probability, axis=1),
-        probability,
-    )["target_significant_sdc"]
-    for key in ("precision", "recall", "f1", "tp", "fp", "fn", "tn"):
-        if not np.isclose(
-            float(metrics[key]),
-            float(expected_metrics[key]),
-            rtol=0.0,
-            atol=1e-15,
-        ):
-            raise AssertionError(f"Detector mismatch for {key}")
-
-    destination.mkdir(parents=True, exist_ok=True)
-    booster = model.get_booster()
-    best_iteration = training["best_iteration"]
-    if best_iteration is not None:
-        booster = booster[: int(best_iteration) + 1]
-    booster.save_model(model_path)
-    _write_json(
-        metadata_path,
-        {
-            "feature_columns": columns,
-            "training": training,
-            "valid_metrics": metrics,
-            "config": asdict(config),
-            "feature_profile": feature_profile,
-            "inference_tree_count": booster.num_boosted_rounds(),
-        },
-    )
-    return DetectorAdapter(booster), tuple(columns)
 
 
 def preload_samples(dataset: Any, count: int) -> list[Any]:
@@ -210,6 +115,7 @@ def preload_samples(dataset: Any, count: int) -> list[Any]:
         samples.append(
             type(sample)(
                 orig_id=sample.orig_id,
+                semantic_group_id=sample.semantic_group_id,
                 question=sample.question,
                 ground_truth=sample.ground_truth,
                 image=load_pil_image(sample.image),
@@ -465,12 +371,6 @@ def refresh_answer_matches(rows: list[dict[str, Any]]) -> None:
         )
 
 
-def _mapping(value: Any, name: str) -> Mapping[str, Any]:
-    if not isinstance(value, Mapping) or not value:
-        raise ValueError(f"{name} must be a non-empty mapping")
-    return value
-
-
 def _write_json(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(f"{path.suffix}.tmp")
@@ -490,55 +390,24 @@ def main() -> int:
         args.job,
         repository_root=root,
     )
-    display_name, model_directory = MODEL_INFO[job.model_name]
+    display_name, _ = MODEL_INFO[job.model_name]
     output_root = (
         args.output_root.resolve()
         if args.output_root is not None
-        else root / "analysis/online_overhead_20260814" / job.model_name
+        else (
+            root
+            / "analysis/iclr_v2/online_overhead"
+            / args.mode_order
+            / job.model_name
+        )
     )
-    online_root = (
-        root
-        / model_directory
-        / "online_step_ablation_20260814"
-        / "LingoQA"
-        / f"k_{args.online_steps}"
-    )
-    detector_depth = (
-        detector_config(config_path, job.model_name).max_depth
-        if args.detector_depth is None
-        else args.detector_depth
-    )
-    compact_depth_root = (
-        root
-        / model_directory
-        / "online_cosine_mean_depth_ablation_20260815"
-        / "LingoQA"
-        / f"depth_{detector_depth}"
-    )
-    if args.feature_profile == "full":
-        expected_metrics = json.loads(
-            (online_root / "output/metrics_summary.json").read_text(
-                encoding="utf-8"
-            )
-        )["valid_full_metrics"]["target_significant_sdc"]
-    else:
-        expected_metrics = json.loads(
-            (compact_depth_root / "detector_metadata.json").read_text(
-                encoding="utf-8"
-            )
-        )["valid_metrics"]
-    selected_config = replace(
-        detector_config(config_path, job.model_name),
-        max_depth=detector_depth,
-    )
-    detector, detector_columns = prepare_detector(
-        online_root / "train_data/train.csv",
-        online_root / "train_data/valid_fixed_k50.csv",
-        output_root
-        / f"detector_{args.feature_profile}_depth_{detector_depth}",
-        selected_config,
-        args.feature_profile,
-        expected_metrics,
+    (
+        detector,
+        detector_columns,
+        detector_threshold,
+        detector_depth,
+    ) = load_deployed_detector(
+        job.paths.labeled_output.parent.parent / "output/metrics_summary.json"
     )
 
     dataset = load_dataset_adapter(job.dataset_config_path)
@@ -590,6 +459,7 @@ def main() -> int:
                     detector_feature_columns=(
                         detector_columns if mode == "sieve" else None
                     ),
+                    detector_threshold=detector_threshold,
                     feature_profile=args.feature_profile,
                 )
             print(f"[benchmark] {display_name} mode={mode}", flush=True)

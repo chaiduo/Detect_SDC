@@ -121,11 +121,12 @@ def run_dataset(
         f"{model_key}_{DATASETS[dataset]}",
         repository_root=root,
     )
-    source_train = pd.read_csv(feature_job.train_output)
-    source_valid = pd.read_csv(feature_job.valid_output)
-    fixed_valid = fixed_validation_cohort(source_valid)
+    source_fit = pd.read_csv(feature_job.fit_output)
+    source_calibration = pd.read_csv(feature_job.calibration_output)
+    source_test = pd.read_csv(feature_job.test_output)
+    fixed_test = fixed_validation_cohort(source_test)
     target = pd.to_numeric(
-        fixed_valid["significant_sdc_target"],
+        fixed_test["significant_sdc_target"],
         errors="raise",
     ).astype(int)
     full_metrics = expected_full_metrics(feature_job)
@@ -150,11 +151,11 @@ def run_dataset(
                 key: full_metrics[key] for key in METRIC_KEYS
             },
             "evaluation_cohort": "fixed_full_non_all_nan",
-            "validation_rows_before_filter": len(source_valid),
-            "validation_rows": len(fixed_valid),
+            "test_rows_before_filter": len(source_test),
+            "test_rows": len(fixed_test),
             "positive_samples": int(target.sum()),
             "negative_samples": int(len(target) - target.sum()),
-            "sample_uid_sha256": _uid_digest(fixed_valid["sample_uid"]),
+            "sample_uid_sha256": _uid_digest(fixed_test["sample_uid"]),
         },
     )
 
@@ -166,8 +167,9 @@ def run_dataset(
             flush=True,
         )
         metrics = run_configuration(
-            source_train=source_train,
-            fixed_valid=fixed_valid,
+            source_fit=source_fit,
+            source_calibration=source_calibration,
+            fixed_test=fixed_test,
             configuration=configuration,
             destination=dataset_root / configuration.name,
             config=xgboost_config,
@@ -182,7 +184,7 @@ def run_dataset(
                 "statistic": configuration.statistic,
                 "feature_count": len(configuration.feature_columns),
                 "evaluation_cohort": "fixed_full_non_all_nan",
-                "validation_rows": len(fixed_valid),
+                "test_rows": len(fixed_test),
                 "positive_samples": int(target.sum()),
                 "negative_samples": int(len(target) - target.sum()),
                 **{key: metrics[key] for key in METRIC_KEYS},
@@ -203,11 +205,11 @@ def main() -> int:
     datasets = tuple(DATASETS) if args.dataset == "all" else (args.dataset,)
     all_rows = []
     for model in models:
-        _, model_directory = MODELS[model]
+        model_key, _ = MODELS[model]
         output_base = (
             args.output_root.resolve()
             if args.output_root is not None
-            else root / model_directory / "compact_feature_ablation_20260815"
+            else root / "artifacts/iclr_v2/ablations/compact_features" / model_key
         )
         model_rows = []
         for dataset in datasets:

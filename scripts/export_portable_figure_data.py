@@ -229,18 +229,9 @@ def _sha256(path: Path) -> str:
 def manifest_sources(root: Path) -> list[Path]:
     patterns = (
         "figures/*.csv",
-        "analysis/qwen_lingoqa_projection_preservation.json",
-        "analysis/feature_ablation_20260815/*.csv",
-        "analysis/feature_ablation_20260815/*.json",
-        "analysis/compact_feature_ablation_20260815/*.csv",
-        "analysis/compact_feature_ablation_20260815/*.json",
-        "analysis/online_overhead_20260814/**/*.csv",
-        "analysis/online_overhead_20260814/**/*.json",
-        "analysis/online_overhead_reverse_20260814/**/*.csv",
-        "analysis/online_overhead_reverse_20260814/**/*.json",
-        "analysis/online_feature_profile_comparison_20260815/**/*.csv",
-        "analysis/online_feature_profile_comparison_20260815/**/*.json",
-        "compare_experiment/results/summary/*.csv",
+        "analysis/iclr_v2/**/*.csv",
+        "analysis/iclr_v2/**/*.json",
+        "compare_experiment/results_v2/summary/*.csv",
     )
     paths: set[Path] = set()
     for pattern in patterns:

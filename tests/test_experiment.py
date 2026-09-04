@@ -30,7 +30,7 @@ class ExperimentConfigTest(unittest.TestCase):
         )
         self.assertEqual(summary["jobs"], 9)
 
-    def test_current_matrix_defines_existing_feature_inputs(self):
+    def test_current_matrix_defines_v2_feature_artifacts(self):
         config = REPOSITORY_ROOT / "configs/experiments/current.yaml"
         expected = {
             "qwen25_vl_earthvqa",
@@ -39,6 +39,9 @@ class ExperimentConfigTest(unittest.TestCase):
             "llava15_earthvqa",
             "llava15_lingoqa",
             "llava15_vqav2",
+            "internvl3_earthvqa",
+            "internvl3_lingoqa",
+            "internvl3_vqav2",
         }
 
         jobs = {
@@ -47,8 +50,13 @@ class ExperimentConfigTest(unittest.TestCase):
         }
 
         self.assertEqual(set(jobs), expected)
-        self.assertTrue(all(job.input_path.is_file() for job in jobs.values()))
+        self.assertTrue(
+            all("artifacts/iclr_v2" in str(job.input_path) for job in jobs.values())
+        )
+        self.assertTrue(all(job.split_manifest.is_file() for job in jobs.values()))
         self.assertTrue(all(len(job.spec.feature_columns) == 72 for job in jobs.values()))
+        self.assertTrue(all(job.spec.last_k_steps == 2 for job in jobs.values()))
+        self.assertTrue(all(job.spec.step_window == "prefix" for job in jobs.values()))
 
     def test_validation_rejects_missing_execution_pair(self):
         config = load_yaml(
@@ -124,6 +132,40 @@ class ExperimentConfigTest(unittest.TestCase):
                 TypeError,
                 "does not match callable signature",
             ):
+                validate_experiment_configuration(
+                    path,
+                    repository_root=REPOSITORY_ROOT,
+                )
+
+    def test_validation_rejects_unknown_bit_policy(self):
+        config = load_yaml(
+            REPOSITORY_ROOT / "configs/experiments/current.yaml"
+        )
+        config = copy.deepcopy(config)
+        config["execution"]["jobs"]["qwen25_vl_earthvqa"]["injection"] = {
+            "bit_policy": "exponent_only",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "invalid.yaml"
+            atomic_write_yaml(path, config)
+            with self.assertRaisesRegex(ValueError, "injection.bit_policy"):
+                validate_experiment_configuration(
+                    path,
+                    repository_root=REPOSITORY_ROOT,
+                )
+
+    def test_validation_requires_max_f1_calibration(self):
+        config = load_yaml(
+            REPOSITORY_ROOT / "configs/experiments/current.yaml"
+        )
+        config = copy.deepcopy(config)
+        config["detector"]["calibration"] = {
+            "strategy": "target_fpr",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "invalid.yaml"
+            atomic_write_yaml(path, config)
+            with self.assertRaisesRegex(ValueError, "maximize_f1"):
                 validate_experiment_configuration(
                     path,
                     repository_root=REPOSITORY_ROOT,

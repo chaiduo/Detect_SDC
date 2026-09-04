@@ -1,57 +1,60 @@
 # Detection Method Comparison
 
-This directory implements detection-only comparisons for:
+This directory evaluates three detectors on the same fault executions:
 
-- Ranger-style numerical range checking
-- Dr.DNA-style activation distribution checking
-- SIEVE semantic discrepancy detection
+- Ranger-style activation range checking;
+- Dr.DNA-style activation distribution checking;
+- SIEVE nominal inter-layer discrepancy detection.
 
-The implementations are mechanism-matched PyTorch/VLM adaptations. They are
-not claimed to reproduce the original Ranger or Dr.DNA systems.
+Ranger-style and Dr.DNA-style are mechanism-matched PyTorch/VLM adaptations,
+not reproductions of the original systems.
 
 ## Protocol
 
-- Monitor the eight decoder layers used by SIEVE.
-- Observe the first two decoding steps.
-- Replay the same saved activation faults once for all methods.
-- Calibrate method thresholds on Non-SDC records at a 1% FPR budget.
-- Report SDC recall, Significant-SDC recall, Non-SDC FPR, precision, and F1.
-- Report both the full cohort and the finite-only cohort.
+- Use the frozen dataset-level Fit/Calibration/Final-test manifests.
+- Build Ranger and Dr.DNA profiles from clean Fit samples only.
+- Inject every fault once and retain every run.
+- Attach Ranger and Dr.DNA scores during the canonical fault inference.
+- Train SIEVE on Fit features.
+- Calibrate every method independently by maximizing Significant-SDC F1.
+- Report Full and Finite metrics on untouched Final test groups; Finite excludes
+  only rows whose 72 SIEVE features are all NaN.
+- Bootstrap confidence intervals by `semantic_group_id`.
 
-Configuration is stored in
-`configs/detection_comparison.yaml`.
+## Execution
 
-## Per-job execution
-
-Run modules from the repository root with the virtual environment associated
-with the selected model:
+Run one physical GPU per model family:
 
 ```bash
-export PYTHONPATH=src:.
+./compare_experiment/run_model_comparison.sh qwen25_vl 2
+./compare_experiment/run_model_comparison.sh internvl3 3
+./compare_experiment/run_model_comparison.sh llava15 4
+```
 
-python -m compare_experiment.profile_baselines \
-  --job qwen25_vl_lingoqa \
-  --device cuda:0
+The launcher executes the complete v2 pipeline in dependency order. The key
+comparison-specific stages are:
 
-python -m compare_experiment.build_replay_manifest \
-  --job qwen25_vl_lingoqa
+```bash
+PYTHONPATH=src:. python -m compare_experiment.profile_baselines \
+  --job qwen25_vl_lingoqa --device cuda:0
 
-python -m compare_experiment.replay_detection \
-  --job qwen25_vl_lingoqa \
-  --device cuda:0
+PYTHONPATH=src:. python -m compare_experiment.collect_detection_data \
+  --job qwen25_vl_lingoqa --device cuda:0
 
-python -m compare_experiment.evaluate_results \
+PYTHONPATH=src:. python -m compare_experiment.evaluate_results \
   --job qwen25_vl_lingoqa
 ```
 
-`replay_detection` appends one completed record at a time and resumes by
-`sample_uid` after interruption. Use `--overwrite` only when intentionally
-restarting a job.
+`collect_detection_data` writes the canonical injection JSONL. It runs each
+fault once while SIEVE telemetry, Ranger scores, and Dr.DNA scores observe the
+same execution. There is no replay manifest or answer-mismatch filtering.
 
-After all nine jobs complete:
+After all nine jobs:
 
 ```bash
-python -m compare_experiment.summarize_results
+PYTHONPATH=src:. python -m compare_experiment.summarize_results
 ```
 
-Artifacts are written below `compare_experiment/results/<job>/`.
+Canonical outputs are stored below
+`compare_experiment/results_v2/<job>/`; model artifacts and labeled records are
+stored below `artifacts/iclr_v2/<job>/`.

@@ -31,6 +31,108 @@ class FaultInjectorTest(unittest.TestCase):
         expected = (raw ^ np.uint32((1 << 0) | (1 << 2))).view(np.float32)
         self.assertEqual(flipped.item(), float(expected[0]))
         self.assertEqual(injector.fault_info["bit_positions"], [0, 2])
+        self.assertEqual(
+            injector.fault_info["bit_categories"],
+            ["mantissa", "mantissa"],
+        )
+        self.assertEqual(injector.fault_info["bit_policy"], "random")
+
+    def test_mantissa_only_policy_never_selects_exponent_or_sign_bits(self):
+        layouts = {
+            torch.float16: set(range(10)),
+            torch.bfloat16: set(range(7)),
+            torch.float32: set(range(23)),
+        }
+        for dtype, allowed in layouts.items():
+            with self.subTest(dtype=dtype):
+                injector = FaultInjector(_TinyModel())
+                injector.set_bit_policy("mantissa_only")
+                injector.set_num_bits(2)
+
+                injector.random_bitflip(
+                    torch.tensor([1.0], dtype=dtype),
+                )
+
+                self.assertTrue(
+                    set(injector.fault_info["bit_positions"]) <= allowed
+                )
+                self.assertEqual(
+                    injector.fault_info["bit_categories"],
+                    ["mantissa", "mantissa"],
+                )
+                self.assertEqual(
+                    injector.fault_info["bit_policy"],
+                    "mantissa_only",
+                )
+
+    def test_low_mantissa_policy_uses_only_low_order_bits(self):
+        layouts = {
+            torch.float16: set(range(5)),
+            torch.bfloat16: set(range(4)),
+            torch.float32: set(range(11)),
+        }
+        for dtype, allowed in layouts.items():
+            with self.subTest(dtype=dtype):
+                injector = FaultInjector(_TinyModel())
+                injector.set_bit_policy("low_mantissa")
+                injector.set_num_bits(2)
+
+                injector.random_bitflip(
+                    torch.tensor([1.0], dtype=dtype),
+                )
+
+                self.assertTrue(
+                    set(injector.fault_info["bit_positions"]) <= allowed
+                )
+                self.assertEqual(
+                    injector.fault_info["bit_policy"],
+                    "low_mantissa",
+                )
+
+    def test_low_exponent_policy_includes_mantissa_and_five_exponent_bits(self):
+        layouts = {
+            torch.float16: set(range(15)),
+            torch.bfloat16: set(range(12)),
+            torch.float32: set(range(28)),
+        }
+        for dtype, allowed in layouts.items():
+            with self.subTest(dtype=dtype):
+                injector = FaultInjector(_TinyModel())
+                injector.set_bit_policy("low_exponent")
+                injector.set_num_bits(2)
+
+                self.assertEqual(
+                    set(injector._candidate_bit_positions(dtype)),
+                    allowed,
+                )
+                injector.random_bitflip(
+                    torch.tensor([1.0], dtype=dtype),
+                )
+
+                self.assertTrue(
+                    set(injector.fault_info["bit_positions"]) <= allowed
+                )
+                self.assertTrue(
+                    set(injector.fault_info["bit_categories"])
+                    <= {"mantissa", "exponent"}
+                )
+                self.assertEqual(
+                    injector.fault_info["bit_policy"],
+                    "low_exponent",
+                )
+
+    def test_targeted_policy_rejects_integer_tensors(self):
+        injector = FaultInjector(_TinyModel())
+        injector.set_bit_policy("mantissa_only")
+
+        with self.assertRaisesRegex(ValueError, "requires a floating dtype"):
+            injector.random_bitflip(torch.tensor([1], dtype=torch.int32))
+
+    def test_rejects_unknown_bit_policy(self):
+        injector = FaultInjector(_TinyModel())
+
+        with self.assertRaisesRegex(ValueError, "bit_policy must be one of"):
+            injector.set_bit_policy("exponent_only")
 
     def test_activation_fault_is_injected_once_and_hooks_are_released(self):
         model = _TinyModel()
@@ -71,6 +173,8 @@ class FaultInjectorTest(unittest.TestCase):
         self.assertTrue(injector.select_target_has_injected)
         self.assertNotEqual(output[0, 0].item(), 1.0)
         self.assertEqual(injector.current_step, 1)
+        self.assertEqual(injector.fault_info["component"], "lm_head")
+        self.assertEqual(injector.fault_info["op_type"], "lm_head")
         injector.unregister_hooks()
 
     def test_weight_fault_can_be_restored_exactly(self):

@@ -1,7 +1,9 @@
 import unittest
+from types import SimpleNamespace
 
 import pandas as pd
 
+from detect_sdc.dataset_splits import create_split_manifest
 from detect_sdc.splitting import split_by_group, validate_identity_columns
 
 
@@ -44,6 +46,36 @@ class GroupSplittingTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "duplicate rows"):
             validate_identity_columns(duplicate)
+
+    def test_dataset_manifest_keeps_semantic_entities_together(self):
+        samples = [
+            SimpleNamespace(
+                orig_id=f"image-{image}:question-{question}",
+                semantic_group_id=f"image-{image}",
+            )
+            for image in range(10)
+            for question in range(2)
+        ]
+
+        manifest = create_split_manifest(
+            "test",
+            samples,
+            seed=42,
+            fit_ratio=0.7,
+            calibration_ratio=0.15,
+            test_ratio=0.15,
+        )
+
+        group_splits = {}
+        for assignment in manifest.assignments:
+            group_splits.setdefault(
+                assignment.semantic_group_id,
+                set(),
+            ).add(assignment.split)
+        self.assertTrue(
+            all(len(splits) == 1 for splits in group_splits.values())
+        )
+        self.assertEqual(len(manifest.assignments), len(samples))
 
 
 if __name__ == "__main__":

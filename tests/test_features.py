@@ -4,7 +4,12 @@ import math
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
+from detect_sdc.dataset_splits import (
+    create_split_manifest,
+    write_split_manifest,
+)
 from detect_sdc.features import (
     FeatureSpec,
     SampleSkipped,
@@ -129,6 +134,22 @@ class FeatureExtractionTest(unittest.TestCase):
             with input_path.open("w", encoding="utf-8") as stream:
                 for sample in samples:
                     stream.write(json.dumps(sample) + "\n")
+            manifest_path = root / "split.json"
+            manifest = create_split_manifest(
+                "test_dataset",
+                (
+                    SimpleNamespace(
+                        orig_id=sample_id,
+                        semantic_group_id=sample_id,
+                    )
+                    for sample_id in ("scene-a", "scene-b", "scene-c")
+                ),
+                seed=42,
+                fit_ratio=0.34,
+                calibration_ratio=0.33,
+                test_ratio=0.33,
+            )
+            write_split_manifest(manifest, manifest_path)
 
             job = FeatureJob(
                 name="test_job",
@@ -136,23 +157,28 @@ class FeatureExtractionTest(unittest.TestCase):
                 dataset="test_dataset",
                 uid_namespace="test_model_test_dataset",
                 input_path=input_path,
-                train_output=root / "train.csv",
-                valid_output=root / "valid.csv",
-                group_column="orig_id",
-                valid_ratio=1 / 3,
-                random_state=42,
+                fit_output=root / "fit.csv",
+                calibration_output=root / "calibration.csv",
+                test_output=root / "test.csv",
+                split_manifest=manifest_path,
+                group_column="semantic_group_id",
                 spec=self.spec,
             )
             summary = execute_feature_job(job)
 
-            with job.train_output.open(encoding="utf-8-sig") as stream:
-                train_rows = list(csv.DictReader(stream))
-            with job.valid_output.open(encoding="utf-8-sig") as stream:
-                valid_rows = list(csv.DictReader(stream))
+            rows = []
+            for path in (
+                job.fit_output,
+                job.calibration_output,
+                job.test_output,
+            ):
+                with path.open(encoding="utf-8-sig") as stream:
+                    rows.extend(csv.DictReader(stream))
 
         self.assertEqual(summary["extracted_rows"], 3)
         self.assertEqual(summary["skipped"], {"duplicate_sample": 1})
-        self.assertEqual(len(train_rows) + len(valid_rows), 3)
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(summary["group_overlap"], 0)
 
 
 def _sample():

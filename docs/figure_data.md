@@ -1,5 +1,8 @@
 # Portable Figure Data
 
+> **历史 portable data**：当前 `figures/` 数据对应 ICLR-v1 结果。完成 `artifacts/iclr_v2/` 正式重跑后必须重新导出 manifest，禁止在新论文中混用旧图。
+
+
 论文图片不应依赖数十 GB 的 `labels.jsonl` 或完整 72 维训练 CSV。仓库采用两层
 数据保留策略：
 

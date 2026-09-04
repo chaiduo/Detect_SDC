@@ -20,6 +20,7 @@ class DatasetAdapterTest(unittest.TestCase):
         self.assertEqual(adapter.name, "earthvqa")
         self.assertEqual(len(samples), 3)
         self.assertTrue(samples[0].orig_id.startswith("275.png:"))
+        self.assertEqual(samples[0].semantic_group_id, "275.png")
         self.assertTrue(Path(samples[0].image).is_file())
         self.assertEqual(len({sample.orig_id for sample in samples}), 3)
 
@@ -34,6 +35,10 @@ class DatasetAdapterTest(unittest.TestCase):
         self.assertEqual(len(samples), 6)
         self.assertTrue(samples[0].orig_id.endswith(":0"))
         self.assertTrue(samples[4].orig_id.endswith(":4"))
+        self.assertEqual(
+            len({sample.semantic_group_id for sample in samples[:5]}),
+            1,
+        )
         self.assertTrue(Path(samples[0].image).is_file())
         self.assertEqual(len({sample.orig_id for sample in samples}), 6)
 
@@ -74,6 +79,7 @@ class DatasetAdapterTest(unittest.TestCase):
         self.assertEqual(adapter.name, "vqav2")
         self.assertEqual(len(samples), 2)
         self.assertEqual(samples[0].orig_id, "262148000")
+        self.assertEqual(samples[0].semantic_group_id, "262148")
         self.assertIsInstance(samples[0].image, dict)
         self.assertEqual(len({sample.orig_id for sample in samples}), 2)
 

@@ -11,11 +11,11 @@ from pathlib import Path
 import torch
 
 from detect_sdc.adapters import load_dataset_adapter, load_model_adapter
-from detect_sdc.features.jobs import load_feature_job
 from detect_sdc.pipeline.jobs import load_pipeline_job
+from detect_sdc.pipeline.split import load_configured_split_manifest
 
 from .artifacts import save_profiles
-from .cohorts import deterministic_subset, load_comparison_cohorts
+from .cohorts import ComparisonCohorts, deterministic_subset
 from .config import load_comparison_config
 from .monitor import OnlineActivationMonitor
 from .profiles import DrDNAProfiler, RangeProfiler
@@ -53,16 +53,26 @@ def main() -> int:
         args.job,
         repository_root=root,
     )
-    feature_job = load_feature_job(
-        comparison.source_config,
-        args.job,
+    split_manifest = load_configured_split_manifest(
+        pipeline_job.dataset_config,
         repository_root=root,
     )
-    cohorts = load_comparison_cohorts(
-        feature_job.train_output,
-        feature_job.valid_output,
-        calibration_ratio=comparison.calibration_ratio,
-        random_seed=comparison.split_seed,
+    cohorts = ComparisonCohorts(
+        fit_orig_ids=frozenset(
+            assignment.orig_id
+            for assignment in split_manifest.assignments
+            if assignment.split == "fit"
+        ),
+        calibration_orig_ids=frozenset(
+            assignment.orig_id
+            for assignment in split_manifest.assignments
+            if assignment.split == "calibration"
+        ),
+        test_orig_ids=frozenset(
+            assignment.orig_id
+            for assignment in split_manifest.assignments
+            if assignment.split == "test"
+        ),
     )
     configured_limit = comparison.maximum_profile_samples
     requested_limit = args.max_profile_samples
@@ -84,19 +94,14 @@ def main() -> int:
         deterministic_subset(
             cohorts.fit_orig_ids,
             limit=paper_fraction_count,
-            random_seed=comparison.split_seed,
+            random_seed=comparison.profile_seed,
         )
     )
 
     output = (
         args.output.resolve()
         if args.output is not None
-        else (
-            root
-            / "compare_experiment/results"
-            / args.job
-            / "profiles.json"
-        )
+        else comparison.results_root / args.job / "profiles.json"
     )
     if output.exists() and not args.overwrite:
         raise FileExistsError(
@@ -117,6 +122,7 @@ def main() -> int:
     )
     processed = 0
     skipped_short = 0
+    profiled_orig_ids: list[str] = []
     try:
         adapter.load(args.device)
         monitor = OnlineActivationMonitor(
@@ -143,6 +149,7 @@ def main() -> int:
                     continue
                 range_profiler.add_trace(trace)
                 drdna_profiler.add_trace(trace)
+                profiled_orig_ids.append(str(sample.orig_id))
                 processed += 1
                 if processed % 50 == 0:
                     print(
@@ -155,13 +162,15 @@ def main() -> int:
             monitor.unregister()
         adapter.close()
 
-    if processed != len(selected):
-        missing = len(selected) - processed - skipped_short
-        raise RuntimeError(
-            f"Profile cohort incomplete: selected={len(selected)} "
-            f"processed={processed} short={skipped_short} missing={missing}"
-        )
+    _validate_profile_counts(
+        selected=len(selected),
+        processed=processed,
+        skipped_short=skipped_short,
+    )
     uid_digest = hashlib.sha256(
+        "\n".join(sorted(profiled_orig_ids)).encode("utf-8")
+    ).hexdigest()
+    selected_uid_digest = hashlib.sha256(
         "\n".join(sorted(selected)).encode("utf-8")
     ).hexdigest()
     save_profiles(
@@ -175,16 +184,36 @@ def main() -> int:
             "profile_samples": processed,
             "skipped_short_outputs": skipped_short,
             "profile_orig_id_sha256": uid_digest,
+            "selected_orig_id_sha256": selected_uid_digest,
             "fit_orig_ids": len(cohorts.fit_orig_ids),
             "calibration_orig_ids": len(
                 cohorts.calibration_orig_ids
             ),
             "test_orig_ids": len(cohorts.test_orig_ids),
             "source_config": str(comparison.source_config),
+            "split_assignment_sha256": (
+                split_manifest.assignment_sha256
+            ),
         },
     )
     print(f"[comparison-profile] wrote {output}", flush=True)
     return 0
+
+
+def _validate_profile_counts(
+    *,
+    selected: int,
+    processed: int,
+    skipped_short: int,
+) -> None:
+    missing = selected - processed - skipped_short
+    if missing:
+        raise RuntimeError(
+            f"Profile cohort incomplete: selected={selected} "
+            f"processed={processed} short={skipped_short} missing={missing}"
+        )
+    if processed == 0:
+        raise RuntimeError("No observable clean traces were available")
 
 
 if __name__ == "__main__":

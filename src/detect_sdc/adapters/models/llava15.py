@@ -8,6 +8,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
+from .determinism import (
+    DEFAULT_DETERMINISTIC_SEED,
+    configure_deterministic_execution,
+    prepare_deterministic_environment,
+    seed_torch,
+)
 from .images import load_pil_image
 
 
@@ -17,6 +23,8 @@ class Llava15Adapter:
     model_base: str | None = None
     source_path: str | None = None
     answer_suffix: str = "The answer must be limited to 30 words."
+    deterministic: bool = False
+    seed: int = DEFAULT_DETERMINISTIC_SEED
     _tokenizer: Any = field(default=None, init=False, repr=False)
     _model: Any = field(default=None, init=False, repr=False)
     _image_processor: Any = field(default=None, init=False, repr=False)
@@ -44,6 +52,8 @@ class Llava15Adapter:
                     "The answer must be limited to 30 words.",
                 )
             ),
+            deterministic=bool(generation.get("deterministic", False)),
+            seed=int(generation.get("seed", DEFAULT_DETERMINISTIC_SEED)),
         )
 
     @property
@@ -53,6 +63,7 @@ class Llava15Adapter:
         return self._model
 
     def load(self, device: str) -> None:
+        prepare_deterministic_environment(self.deterministic)
         if self.source_path:
             source = Path(self.source_path).expanduser().resolve()
             if not source.is_dir():
@@ -76,6 +87,13 @@ class Llava15Adapter:
         from llava.model.builder import load_pretrained_model
         from llava.utils import disable_torch_init
 
+        import torch
+
+        configure_deterministic_execution(
+            torch,
+            enabled=self.deterministic,
+            seed=self.seed,
+        )
         disable_torch_init()
         model_name = get_model_name_from_path(self.model_path)
         tokenizer, model, image_processor, _ = load_pretrained_model(
@@ -117,6 +135,8 @@ class Llava15Adapter:
             or self._model_name is None
         ):
             raise RuntimeError("Llava15Adapter must be loaded before generate")
+        if self.deterministic:
+            seed_torch(torch, self.seed)
 
         pil_image = load_pil_image(image)
         prompt = self._build_prompt(

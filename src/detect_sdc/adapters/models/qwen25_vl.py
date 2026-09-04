@@ -5,6 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
+from .determinism import (
+    DEFAULT_DETERMINISTIC_SEED,
+    configure_deterministic_execution,
+    prepare_deterministic_environment,
+    seed_torch,
+)
 from .images import load_pil_image
 
 
@@ -14,6 +20,8 @@ class Qwen25VLAdapter:
     min_pixels: int = 256 * 28 * 28
     max_pixels: int = 1280 * 28 * 28
     answer_suffix: str = "The answer must be limited to 30 words."
+    deterministic: bool = False
+    seed: int = DEFAULT_DETERMINISTIC_SEED
     _model: Any = field(default=None, init=False, repr=False)
     _processor: Any = field(default=None, init=False, repr=False)
     _device: str | None = field(default=None, init=False, repr=False)
@@ -34,6 +42,8 @@ class Qwen25VLAdapter:
                     "The answer must be limited to 30 words.",
                 )
             ),
+            deterministic=bool(generation.get("deterministic", False)),
+            seed=int(generation.get("seed", DEFAULT_DETERMINISTIC_SEED)),
         )
 
     @property
@@ -43,9 +53,15 @@ class Qwen25VLAdapter:
         return self._model
 
     def load(self, device: str) -> None:
+        prepare_deterministic_environment(self.deterministic)
         import torch
         from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 
+        configure_deterministic_execution(
+            torch,
+            enabled=self.deterministic,
+            seed=self.seed,
+        )
         self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             self.model_path,
             torch_dtype=torch.bfloat16,
@@ -68,6 +84,8 @@ class Qwen25VLAdapter:
 
         if self._model is None or self._processor is None or self._device is None:
             raise RuntimeError("Qwen25VLAdapter must be loaded before generate")
+        if self.deterministic:
+            seed_torch(torch, self.seed)
         pil_image = load_pil_image(image)
         messages = [
             {"role": "system", "content": self.answer_suffix},

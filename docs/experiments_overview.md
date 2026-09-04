@@ -1,5 +1,8 @@
 # Detect_SDC 实验总览与复现索引
 
+> **历史结果说明（ICLR v1）**：本文档中的数值来自旧的 `orig_id` 85/15 划分、部分 fault-run 保留和旧 Mapping 配置。它们仅作为历史基线，不得用于新的投稿主表。当前协议见 [`sieve_iclr_revision_plan.md`](sieve_iclr_revision_plan.md)，新产物写入 `artifacts/iclr_v2/`。
+
+
 本文档统一梳理 Detect_SDC 项目中已经完成的科学实验、消融实验、在线部署实验
 和对比实验。它是实验台账与结果索引，不替代各实验目录中的原始
 `metrics_summary.json`、CSV 或详细分析文档。
@@ -79,8 +82,8 @@ significant_sdc_target =
 - `Non-all-NaN`：至少有一个有限特征的固定验证子集。
 
 消融实验必须使用由 Full 配置定义的固定 non-all-NaN cohort，不能让不同配置
-各自删除样本。方法对比实验采用另一套“约 1% Non-SDC FPR 校准”协议，不能将
-其 Recall/F1 与默认 detector 表直接混合。
+各自删除样本。正式 detector 与方法对比均在 Calibration 上最大化
+Significant-SDC F1，并冻结阈值用于 Final Test。
 
 ## 3. 端到端主实验
 
@@ -265,7 +268,7 @@ cohort 上评估。
 脚本与结果：
 
 ```text
-scripts/run_qwen_leave_one_pair_out.py
+scripts/run_layer_pair_design_ablation.py
 <model>/pair_ablation_leave_one_out_20260813/<dataset>/summary.csv
 ```
 
@@ -392,8 +395,6 @@ Depth 2 将 XGBoost 模型显著缩小，但固定单线程 batch-1 推断仅从
 脚本：
 
 ```text
-scripts/run_online_cosine_mean_depth_ablation.py
-scripts/benchmark_xgboost_profiles.py
 ```
 
 ## 9. 在线部署开销
@@ -451,9 +452,9 @@ docs/compact_feature_ablation_20260815.md
 - Dr.DNA-style：Individual DNA、Layer DNA 和 Extreme-neuron 分数；
 - SIEVE：NaN/Inf 快速路径加语义差异 detector。
 
-三种方法复用同一批故障记录、8 个监测层和前两个 decoding step。阈值在独立
-calibration split 上按约 1% Non-SDC FPR 预算选择，最终指标在不相交的 test
-split 上报告。
+三种方法复用同一批故障记录、8 个监测层和前两个 decoding step。阈值分别在
+独立 calibration split 上最大化 Significant-SDC F1，最终指标在不相交的
+test split 上报告。
 
 ### 10.1 九组宏平均
 
@@ -544,8 +545,8 @@ PYTHONPATH=src:. python -m compare_experiment.summarize_results
 
 ## 14. 使用结果时的注意事项
 
-1. 主实验和 detector 消融使用固定 non-all-NaN cohort；方法对比使用
-   calibration/test split 和固定 FPR 预算，两者不是同一评估协议。
+1. 主实验、detector 消融和方法对比均使用独立 calibration/test split，并在
+   Calibration 上最大化 Significant-SDC F1。
 2. 6 维与 72 维的跨轮开销不能直接归因于特征维度；应使用同轮配对结果。
 3. Mapping MSE 受模型 activation 尺度影响，不能跨模型直接比较。
 4. `pair_sweep/` 和旧 `max` 投影结果属于历史探索，不应替代当前 `project`

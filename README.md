@@ -1,232 +1,112 @@
 # Detect SDC
 
-Detect SDC evaluates silent data corruption in multimodal language models. All
-runtime code lives under `src/detect_sdc/`. The `Qwen2.5-VL-7B/`,
-`InternVL3-8B/`, and `llava-v1.5-7B/` trees contain only configured inputs and
-experiment artifacts.
+Detect SDC evaluates severity-aware silent data corruption detection in
+multimodal language models. Runtime code lives under `src/detect_sdc/`; formal
+ICLR-v2 artifacts are written under `artifacts/iclr_v2/`. Historical model
+directories and results are retained as baselines and are not overwritten.
 
-完整实验设计、结果表、论文归属和复现入口见
-[`docs/experiments_overview.md`](docs/experiments_overview.md)。
-从原始数据重跑所需的环境、外部依赖、固定切分、完整命令和校验清单见
-[`docs/reproducibility.md`](docs/reproducibility.md)。
-无需原始 JSONL、模型或 GPU 的论文图片重画说明见
-[`docs/figure_data.md`](docs/figure_data.md)。
+The active redesign and rerun contract is documented in
+[`docs/sieve_iclr_revision_plan.md`](docs/sieve_iclr_revision_plan.md).
 
-## Pipeline
+## Canonical protocol
 
-The canonical pipeline stages are:
+Each dataset contributes 5,000 inputs. One frozen manifest assigns semantic
+entities to Fit, Calibration, and Final test:
 
-1. `profile`: generate clean baseline answers.
-2. `collect_mapping`: collect inter-layer mapping samples.
-3. `train_mapping`: train the residual mapping model.
-4. `inject`: inject faults and collect telemetry.
+- EarthVQA groups by image;
+- LingoQA groups all frames of one question;
+- VQAv2 groups all questions for one image.
+
+All model families reuse the same dataset manifests. Fit trains Mapping and
+XGBoost, Calibration selects the operating threshold, and Final test is only
+used for reporting.
+
+Create or validate the manifests before GPU work:
+
+```bash
+PYTHONPATH=src python -m detect_sdc.cli split --dataset earthvqa
+PYTHONPATH=src python -m detect_sdc.cli split --dataset lingoqa
+PYTHONPATH=src python -m detect_sdc.cli split --dataset vqav2
+```
+
+The configured job stages are:
+
+1. `profile`: generate fault-free baseline answers.
+2. `collect_mapping`: collect clean Fit inter-layer samples.
+3. `train_mapping`: train a group-disjoint Mapping model.
+4. `inject`: retain one clean execution and every configured fault execution.
 5. `label`: assign Prometheus quality and significance labels.
-6. `featurize`: aggregate telemetry into tabular features.
-7. `train_detector`: train the significant-SDC detector.
-8. `report`: load the detector metrics artifact.
+6. `featurize`: materialize Fit, Calibration, and Final-test CSV files.
+7. `train_detector`: train on Fit and maximize F1 on Calibration.
+8. `report`: load the final metrics artifact.
 
-## Architecture
+## Method
 
-- `adapters/datasets`: EarthVQA, LingoQA, and VQAv2 sample normalization.
-- `adapters/models`: Qwen2.5-VL and LLaVA 1.5 deterministic generation.
-- `pipeline`: configured profile, mapping, injection, and training dispatch.
-- `fault_injector.py`: canonical activation and weight bit-flip implementation.
-- `labeling.py`: streaming Prometheus labeling with atomic outputs.
-- `profiler.py`: canonical model instrumentation and telemetry implementation.
-- `features`: shared 72-feature extraction and stable sample identities.
-- `splitting.py`: the only production `orig_id` grouped split implementation.
-- `detector`: binary significant-SDC training, evaluation, and layer-pair experiments.
-- `mapping`: one shared mapping architecture and trainer with configured job
-  profiles.
+- Faults are one Prefill activation double-bit flip on an eligible `nn.Linear`
+  output exposed by the model adapter.
+- `bit_policy` supports `random`, `mantissa_only`, `low_mantissa`, and
+  `low_exponent`; the last policy samples the full mantissa plus the five
+  least-significant exponent bits.
+- Every fault records component, layer, operation, dtype, element, bit positions,
+  bit categories, before/after values, run index, and split identity.
+- The Mapping model is a layer-aware residual MLP with 64-dimensional input,
+  hidden width 64, eight residual blocks, and 16-dimensional layer embeddings.
+- The online representation uses six adjacent layer pairs, four discrepancy
+  metrics, and mean/max/min over the first two decoding steps: 72 features.
+- `significant_sdc_target` is true when the output changes and Prometheus assigns
+  severity 2 relative to the fault-free response.
 
-Torch, Transformers, Qwen, and LLaVA dependencies are imported lazily by the
-model and labeling adapters. Configuration inspection and dry-runs do not load
-model weights.
+## Detector evaluation
 
-`detect-sdc config validate configs/experiments/current.yaml` checks the full
-execution contract without loading model weights: matrix/job coverage, adapter
-and trainer imports, callable arguments, input paths, stage output suffixes,
-mapping dimensions and layer counts, split parameters, and fault-run bounds.
+The canonical XGBoost path:
 
-## Canonical labels
-
-- `quality_score`: `0..2`, where higher is better.
-- `significance`: `0..2`, where higher is more severe.
-- `significant_sdc_target`: `pred_answer != clean_answer and significance == 2`.
-
-Parse failures are represented by an explicit status instead of the numeric
-sentinel `-1`.
-
-## Configuration
-
-Model, dataset, and experiment configuration lives under `configs/`:
-
-```text
-configs/
-├── models/
-├── datasets/
-└── experiments/
-```
-
-Validate the current experiment matrix without running a model:
-
-```bash
-PYTHONPATH=src python -m detect_sdc.cli config validate \
-  configs/experiments/current.yaml
-```
-
-Run one stage without executing GPU work:
-
-```bash
-PYTHONPATH=src python -m detect_sdc.cli run \
-  --job qwen25_vl_earthvqa \
-  --stage inject \
-  --dry-run
-```
-
-`--stage` is repeatable. `detect-sdc` (or `python -m detect_sdc.cli`) is the
-only supported command entry point.
-
-The GPU stages use the same orthogonal model and dataset adapters:
-
-```bash
-PYTHONPATH=src python -m detect_sdc.cli run \
-  --job qwen25_vl_earthvqa \
-  --stage collect_mapping \
-  --overwrite
-
-PYTHONPATH=src python -m detect_sdc.cli run \
-  --job qwen25_vl_earthvqa \
-  --stage inject \
-  --overwrite
-```
-
-Mapping collection writes adjacent-layer supervision rows atomically. Injection
-loads the clean answers and mapping checkpoint, runs one clean pass followed by
-the configured fault passes, and keeps complete or SDC-only runs according to
-`injection.retain_all_fault_runs`.
-
-## Labeling
-
-Prometheus output is accepted only when the final line contains exactly one
-`[RESULT] 0`, `[RESULT] 1`, or `[RESULT] 2`. Identical clean and predicted
-answers skip judge inference and receive `quality_score=2`, `significance=0`.
-Large JSONL inputs are processed in bounded chunks and written atomically.
-
-```bash
-PYTHONPATH=src python -m detect_sdc.cli label \
-  --job qwen25_vl_earthvqa \
-  --device cuda:0 \
-  --batch-size 64
-```
-
-## Feature extraction
-
-All nine model and dataset combinations use the same streaming extractor and
-`orig_id`-grouped splitter. Run a configured job with:
-
-```bash
-PYTHONPATH=src python -m detect_sdc.cli featurize \
-  --job qwen25_vl_earthvqa
-```
-
-The available jobs are defined under `featurization.jobs` in
-`configs/experiments/current.yaml`. Use `--train-output` and `--valid-output`
-to write a comparison run without replacing the configured CSV files.
-
-The shared extractor enforces:
-
-- 72 telemetry features from the configured layer pairs and last 50 steps;
-- finite-value aggregation, while preserving all-feature-NaN rows;
-- canonical ternary `label` and binary `significant_sdc_target`;
-- stable `sample_uid` values based on `orig_id` and fault metadata;
-- deterministic grouped splitting with zero `orig_id` overlap.
-
-Exact duplicate source samples are collapsed by stable UID. A UID collision
-with different feature content is rejected instead of being silently merged.
-
-## Detector
-
-All nine jobs train one binary XGBoost target: `significant_sdc_target`. Rows
-whose 72 features are all NaN remain in training. The same fitted model reports
-`valid_full_metrics` and `valid_non_all_nan_metrics`. Train/test splitting is
-deterministic and grouped by `orig_id`; overlap is rejected.
+- keeps all-feature-NaN rows in Fit;
+- uses a group-disjoint holdout inside Fit for early stopping;
+- selects the threshold maximizing Significant-SDC F1 on Calibration, using
+  both target classes and breaking ties with the highest threshold;
+- reports full, finite, clean, injected Non-SDC, Slight-SDC, and
+  Significant-SDC cohorts on untouched Final test.
 
 ```bash
 PYTHONPATH=src python -m detect_sdc.cli train \
   --job qwen25_vl_earthvqa
 ```
 
-The layer-pair sweep is an experimental backend under
-`detect_sdc.detector.layer_pair_sweep`; it preserves threshold and ROC analysis
-but defaults to the canonical keep-all-NaN policy and significant-SDC target.
+## Ranger/Dr.DNA comparison
 
-## Runtime stages
-
-Mapping collection and fault injection are model-agnostic stages built from
-ModelAdapter, DatasetAdapter, Profiler, and FaultInjector. Both stages stream to
-temporary JSONL files and atomically publish successful outputs. The inject
-stage loads each 7B model once for its clean run and all configured fault runs.
-
-Every model/dataset artifact directory uses the same stage filenames under
-`json/`: `profile.json`, `mapping.jsonl`, `injection.jsonl`, and `labels.jsonl`.
-
-Mapping-model architecture, profiler projection, fault run count, retained
-full runs, bit count, and random seed are explicit model/job configuration.
-Mapping-model training is also a package stage and atomically publishes its
-checkpoint; trainer-specific split and optimization settings remain explicit
-configuration.
-
-## Baseline
-
-The pre-refactor inputs and metrics are frozen in:
-
-```text
-baselines/pre_refactor_20260727/baseline.yaml
-```
-
-It contains:
-
-- the pre-refactor Git revision;
-- SHA-256 checksums and sizes for active labeled JSONL and feature CSV files;
-- CSV row, label, significance, and target distributions;
-- complete snapshots of available `metrics_summary.json` files;
-- the Python and dependency versions used during capture.
-
-Regenerate it only when intentionally defining a new baseline:
+`compare_experiment` builds clean Fit profiles, then observes Ranger-style,
+Dr.DNA-style, and SIEVE signals during the same fault execution. There is no
+second replay campaign or answer-mismatch filtering.
 
 ```bash
-PYTHONPATH=src python -m detect_sdc.cli baseline freeze \
-  --spec configs/baseline.yaml \
-  --output baselines/pre_refactor_20260727/baseline.yaml
+./compare_experiment/run_model_comparison.sh qwen25_vl 2
 ```
+
+## Configuration and validation
+
+```bash
+PYTHONPATH=src python -m detect_sdc.cli config validate \
+  configs/experiments/current.yaml
+
+PYTHONPATH=src python -m detect_sdc.cli run \
+  --job qwen25_vl_earthvqa --stage inject --dry-run
+```
+
+Configuration inspection does not load model weights. GPU stages lazily import
+model-specific dependencies.
 
 ## Development
 
-Install the shared package and training dependencies:
-
 ```bash
 python -m pip install -e '.[train,dev]'
+PYTHONPATH=src python -m unittest discover tests
 ```
 
-Run the unified CLI from an environment compatible with the selected model.
-The local LLaVA fork requires its pinned Transformers and SentencePiece
-versions. The LLaVA vision tower
-`openai/clip-vit-large-patch14-336` must be available in the Hugging Face cache
-for offline runs.
+Pipeline changes must preserve:
 
-Run the package tests:
-
-```bash
-python -m pytest
-```
-
-## Pipeline invariants
-
-Changes to the pipeline must preserve:
-
-- grouping by `orig_id`;
-- zero overlap between train/test/valid groups;
-- full and non-all-feature-NaN evaluation slices;
-- target label counts;
-- prediction and metric output schemas.
+- frozen semantic-group manifests and zero Fit/Calibration/Test overlap;
+- Mapping training on Fit only and group-disjoint internal splits;
+- complete clean/fault retention;
+- one shared fault execution for comparison methods;
+- calibrated thresholds and untouched Final-test reporting;
+- stable sample UIDs, atomic outputs, and artifact checksums.

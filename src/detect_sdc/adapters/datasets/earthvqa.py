@@ -70,6 +70,7 @@ class EarthVQAAdapter:
                     continue
                 yield DatasetSample(
                     orig_id=f"{image_filename}:{qa_index}",
+                    semantic_group_id=str(image_filename),
                     question=question,
                     ground_truth=str(qa.get("Answer", "")),
                     image=image_path,

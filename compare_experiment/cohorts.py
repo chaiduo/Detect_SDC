@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Iterable
-
-import pandas as pd
 
 
 @dataclass(frozen=True)
@@ -53,39 +50,6 @@ class ComparisonCohorts:
         }
 
 
-def load_comparison_cohorts(
-    train_csv: str | Path,
-    valid_csv: str | Path,
-    *,
-    calibration_ratio: float = 0.2,
-    random_seed: int = 42,
-) -> ComparisonCohorts:
-    if not 0.0 < calibration_ratio < 1.0:
-        raise ValueError("calibration_ratio must be between zero and one")
-    train_ids = _read_orig_ids(train_csv)
-    test_ids = _read_orig_ids(valid_csv)
-    overlap = train_ids & test_ids
-    if overlap:
-        raise ValueError(
-            f"Main train/test orig_id overlap: {len(overlap)}"
-        )
-
-    ranked = sorted(
-        train_ids,
-        key=lambda value: _stable_rank(value, random_seed),
-    )
-    calibration_count = max(1, round(len(ranked) * calibration_ratio))
-    if calibration_count >= len(ranked):
-        raise ValueError("Calibration split leaves no fit samples")
-    calibration = frozenset(ranked[:calibration_count])
-    fit = frozenset(ranked[calibration_count:])
-    return ComparisonCohorts(
-        fit_orig_ids=fit,
-        calibration_orig_ids=calibration,
-        test_orig_ids=frozenset(test_ids),
-    )
-
-
 def deterministic_subset(
     orig_ids: Iterable[str],
     *,
@@ -99,18 +63,6 @@ def deterministic_subset(
     if limit <= 0:
         raise ValueError("limit must be positive or None")
     return tuple(ordered[:limit])
-
-
-def _read_orig_ids(path: str | Path) -> set[str]:
-    frame = pd.read_csv(path, usecols=["orig_id"])
-    values = {
-        str(value)
-        for value in frame["orig_id"].dropna().astype(str)
-        if str(value).strip()
-    }
-    if not values:
-        raise ValueError(f"No orig_id values found in {path}")
-    return values
 
 
 def _stable_rank(value: str, seed: int) -> str:

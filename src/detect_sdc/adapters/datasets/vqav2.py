@@ -31,7 +31,13 @@ class VQAv2Adapter:
         yielded = 0
         for parquet_file in self._parquet_files():
             frame = pd.read_parquet(parquet_file)
-            required = {"question_id", "question", "multiple_choice_answer", "image"}
+            required = {
+                "question_id",
+                "question",
+                "multiple_choice_answer",
+                "image",
+                "image_id",
+            }
             missing = required - set(frame.columns)
             if missing:
                 raise ValueError(
@@ -42,14 +48,16 @@ class VQAv2Adapter:
                 if max_samples is not None and yielded >= max_samples:
                     return
                 question_id = str(row["question_id"])
+                image_id = str(row["image_id"])
                 yield DatasetSample(
                     orig_id=question_id,
+                    semantic_group_id=image_id,
                     question=str(row["question"]).strip(),
                     ground_truth=str(row["multiple_choice_answer"]),
                     image=row["image"],
                     metadata={
                         "question_id": question_id,
-                        "image_id": _optional_string(row.get("image_id")),
+                        "image_id": image_id,
                         "question_type": _optional_string(
                             row.get("question_type")
                         ),

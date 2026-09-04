@@ -6,11 +6,9 @@ answers, how to instrument activations, how to train the mapping model, and how
 to run fault injection.
 
 Concrete experiment jobs are defined in `configs/experiments/current.yaml`.
-Job-level settings can override model defaults for:
-
-- `instrumentation`
-- `mapping_training.kwargs`
-- `injection`
+Canonical jobs only override instrumentation values that are part of the
+recorded experimental protocol. Mapping architecture and training parameters
+are shared across datasets for a model family.
 
 ## Top-Level Fields
 
@@ -101,12 +99,10 @@ mapping_training:
     weight_decay: 0.0001
     epochs: 500
     num_workers: 8
-    split_strategy: sequential
     valid_ratio: 0.15
-    test_ratio: 0.1
-    test_ratio_in_train: 0.15
+    test_ratio: 0.15
     cosine_weight: 1.0
-    early_stop_patience: 5
+    early_stop_patience: 10
     scheduler_enabled: true
     scheduler_patience: 5
     scheduler_factor: 0.5
@@ -123,12 +119,8 @@ mapping_training:
 - `weight_decay`: AdamW weight decay.
 - `epochs`: Maximum number of epochs.
 - `num_workers`: DataLoader worker count.
-- `split_strategy`: Mapping-data split strategy. Supported values are
-  `sequential`, `random`, and `partition`.
-- `valid_ratio`: Selection/validation split ratio.
-- `test_ratio`: Final test split ratio for `random` and `partition` strategies.
-- `test_ratio_in_train`: Selection split ratio inside the training pool for
-  `sequential` strategy.
+- `valid_ratio`: Group-disjoint validation ratio within the outer Fit split.
+- `test_ratio`: Group-disjoint Mapping test ratio within the outer Fit split.
 - `cosine_weight`: Weight of cosine loss in the mapping regression objective.
 - `early_stop_patience`: Stop after this many non-improving selection epochs.
 - `scheduler_enabled`: Whether to enable `ReduceLROnPlateau`.
@@ -152,11 +144,11 @@ injection:
     num_layers: 28
     layer_emb_dim: 16
     hidden_dim: 64
-    num_blocks: 4
+    num_blocks: 8
     dropout: 0.1
   fault_runs: 10
-  retain_all_fault_runs: 1
   num_bits: 2
+  bit_policy: random
   seed: 42
 ```
 
@@ -171,9 +163,13 @@ injection:
 - `mapping_kwargs.num_blocks`: Number of residual MLP blocks.
 - `mapping_kwargs.dropout`: Dropout probability used by the mapping model.
 - `fault_runs`: Number of fault-injection runs per clean sample.
-- `retain_all_fault_runs`: Number of initial fault runs to fully retain in the
-  output JSONL, regardless of whether they trigger a significant outcome.
+- Every clean and fault run is retained. Selective SDC-only retention is not
+  supported because it biases FPR and deployment-precision estimates.
 - `num_bits`: Number of bits flipped per injected fault.
+- `bit_policy`: Candidate-bit policy. `random` uses every bit;
+  `mantissa_only` uses the full mantissa; `low_mantissa` uses its low-order
+  subset; `low_exponent` uses the full mantissa plus the five least-significant
+  exponent bits and excludes the sign bit.
 - `seed`: Random seed for fault selection.
 
 ## Adding A Model
