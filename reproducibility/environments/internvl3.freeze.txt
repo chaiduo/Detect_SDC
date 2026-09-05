@@ -10,7 +10,7 @@ charset-normalizer==3.4.9
 cuda-bindings==12.9.4
 cuda-pathfinder==1.2.2
 cuda-toolkit==12.8.1
--e git+https://github.com/chaiduo/Detect_SDC.git@10f3d6074f10b860bd0068a24ed84d3769f39c75#egg=detect_sdc
+-e git+https://github.com/chaiduo/SIEVE_ICLR-27.git@10f3d6074f10b860bd0068a24ed84d3769f39c75#egg=detect_sdc
 einops==0.8.2
 filelock==3.29.0
 flash_attn @ file:///data01/cd_workspace/pip-cache/wheels/3d/59/46/f282c12c73dd4bb3c2e3fe199f1a0d0f8cec06df0cccfeee27/flash_attn-2.8.3-cp312-cp312-linux_x86_64.whl

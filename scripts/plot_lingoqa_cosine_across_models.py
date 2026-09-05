@@ -65,7 +65,7 @@ def parse_args() -> argparse.Namespace:
         "--repository-root",
         type=Path,
         default=repository_root,
-        help="Detect_SDC repository root.",
+        help="SIEVE repository root.",
     )
     parser.add_argument(
         "--output",

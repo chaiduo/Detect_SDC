@@ -58,6 +58,15 @@ def parse_args() -> argparse.Namespace:
         "--output-dir", type=Path,
         default=root / "analysis/step_ablation_48d",
     )
+    parser.add_argument(
+        "--input-root",
+        type=Path,
+        default=None,
+        help=(
+            "Optional root containing <job>/labels.jsonl inputs, for example "
+            "analysis/telemetry_50."
+        ),
+    )
     parser.add_argument("--n-jobs", type=int, default=8)
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
@@ -310,6 +319,15 @@ def main() -> int:
         for dataset in DATASETS:
             name = f"{model}_{dataset}"
             job = load_feature_job(config_path, name, repository_root=root)
+            if args.input_root is not None:
+                input_path = (
+                    args.input_root.resolve() / name / "labels.jsonl"
+                )
+                if not input_path.is_file():
+                    raise FileNotFoundError(
+                        f"Telemetry label input does not exist: {input_path}"
+                    )
+                job = replace(job, input_path=input_path)
             destination = output_dir / name
             extract_job(job, destination, feature_specs, args.overwrite)
             validate_step_coverage(destination)
